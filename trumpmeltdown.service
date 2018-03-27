@@ -1,0 +1,5 @@
+[Unit]
+Description=TrumpMeltdown
+
+[Service]
+ExecStart=/usr/local/bin/trumpmeltdown
