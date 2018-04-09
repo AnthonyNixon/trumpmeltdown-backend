@@ -126,12 +126,17 @@ func main() {
 	fmt.Printf("Tweets contains %d, adding %d more...\n", len(Tweets), (numTweets - len(Tweets)))
 
 	for i := 0; (len(Tweets) <= numTweets) && (i <= last.NumTweets); i++ {
-		fmt.Println(i)
 		Tweets = append(Tweets, Tweet{last.Tweets[i].Text, last.Tweets[i].Sentiment, last.Tweets[i].Id})
 	}
+
+	for _, tweet := range Tweets {
+		totalSentiment += tweet.Sentiment
+	}
+
+	average := totalSentiment / float32(len(Tweets))
 	numTweets = len(Tweets)
 	filename := fmt.Sprintf("%d", currentTimestamp)
-	responseJson := TweetSentiment{currentTimestamp, Tweets, totalSentiment/float32(numTweets-1), numTweets-1, nextUpdate}
+	responseJson := TweetSentiment{currentTimestamp, Tweets, average, numTweets, nextUpdate}
 	jsonString, err := json.MarshalIndent(responseJson, "", "    ")
 	ioutil.WriteFile(filename, jsonString, 0644)
 
