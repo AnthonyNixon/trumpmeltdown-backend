@@ -37,6 +37,7 @@ var numTweets = 10
 
 
 func main() {
+
 	now := time.Now()
 
 	currentTimestamp := now.Unix()
@@ -51,27 +52,49 @@ func main() {
 	anaconda.SetConsumerSecret(consumerSecret)
 	api := anaconda.NewTwitterApi(accessToken, accessSecret)
 
+	ctx := context.Background()
+	client, err := language.NewClient(ctx)
+	if err != nil {
+		fmt.Printf("Failed to create client: %v", err)
+	}
+	storageClient, err := storage.NewClient(ctx)
+	if err != nil {
+		fmt.Printf("Failed to create client: %v", err)
+	}
+	bucketName := os.Getenv("TRUMPMELTDOWN_SENTIMENT_BUCKET")
+	bucket := storageClient.Bucket(bucketName)
+
+	latestReader, err := bucket.Object("latest").NewReader(ctx)
+	if err != nil {
+		fmt.Errorf("readFile: unable to open file from bucket %q, file %q: %v", bucketName, "latest", err)
+		return
+	}
+	defer latestReader.Close()
+	latestContents, err := ioutil.ReadAll(latestReader)
+	if err != nil {
+		fmt.Errorf("readFile: unable to read data from bucket %q, file %q: %v", bucketName, "latest", err)
+		return
+	}
+
+	var last TweetSentiment
+	json.Unmarshal(latestContents, &last)
+	latestTweet := last.Tweets[0]
+
 	values := url.Values{}
 	values.Set("screen_name", "realdonaldtrump")
 	values.Set("count", fmt.Sprintf("%d", numTweets))
+	values.Set("since_id", fmt.Sprintf("%d", latestTweet.Id))
 
 	tweetsResponse, err := api.GetUserTimeline(values)
 	if err != nil {
 		fmt.Println(err)
 	}
 
-	ctx := context.Background()
-	client, err := language.NewClient(ctx)
-	if err != nil {
-		fmt.Printf("Failed to create client: %v", err)
-	}
-
 
 	var Tweets []Tweet
 	var totalSentiment float32
 
-	tweetsResponse = tweetsResponse[:numTweets]
-
+	fmt.Printf("New Tweets: %d\n", len(tweetsResponse))
 	fmt.Println("Tweets: ")
 	//fmt.Printf("%v\n", tweetsResponse)
 	fmt.Println(len(tweetsResponse))
@@ -96,24 +119,21 @@ func main() {
 		} else {
 			fmt.Println("Sentiment: negative")
 		}
-		totalSentiment += sentiment.DocumentSentiment.Score
 		Tweets = append(Tweets, Tweet{tweet.FullText, sentiment.DocumentSentiment.Score, tweet.Id})
 	}
 
+	fmt.Printf("Number of tweets in latest file: %d\n", len(last.Tweets))
+	fmt.Printf("Tweets contains %d, adding %d more...\n", len(Tweets), (numTweets - len(Tweets)))
+
+	for i := 0; (len(Tweets) <= numTweets) && (i <= last.NumTweets); i++ {
+		fmt.Println(i)
+		Tweets = append(Tweets, Tweet{last.Tweets[i].Text, last.Tweets[i].Sentiment, last.Tweets[i].Id})
+	}
 	numTweets = len(Tweets)
 	filename := fmt.Sprintf("%d", currentTimestamp)
 	responseJson := TweetSentiment{currentTimestamp, Tweets, totalSentiment/float32(numTweets-1), numTweets-1, nextUpdate}
 	jsonString, err := json.MarshalIndent(responseJson, "", "    ")
 	ioutil.WriteFile(filename, jsonString, 0644)
-
-	// uploading the file to a bucket
-	storageClient, err := storage.NewClient(ctx)
-	bucketName := os.Getenv("TRUMPMELTDOWN_SENTIMENT_BUCKET")
-	if err != nil {
-		fmt.Printf("Failed to create client: %v", err)
-	}
-
-	bucket := storageClient.Bucket(bucketName)
 
 	upload := bucket.Object(filename).NewWriter(ctx)
 	upload.ContentType = "application/json"

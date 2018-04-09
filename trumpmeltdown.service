@@ -3,3 +3,4 @@ Description=TrumpMeltdown
 
 [Service]
 ExecStart=/usr/local/bin/trumpmeltdown
+EnvironmentFile=/home/ajn0592/servicevariables
