@@ -15,6 +15,7 @@ import (
 	// Imports the Google Cloud Storage client package.
 	"cloud.google.com/go/storage"
 	"os"
+	"strings"
 )
 
 type TweetSentiment struct {
@@ -78,7 +79,7 @@ func main() {
 
 	var last TweetSentiment
 	json.Unmarshal(latestContents, &last)
-	latestTweet := last.Tweets[0]
+	latestTweet := last.Tweets[1]
 
 	values := url.Values{}
 	values.Set("screen_name", "realdonaldtrump")
@@ -125,7 +126,7 @@ func main() {
 	fmt.Printf("Number of tweets in latest file: %d\n", len(last.Tweets))
 	fmt.Printf("Tweets contains %d, adding %d more...\n", len(Tweets), (numTweets - len(Tweets)))
 
-	for i := 0; (len(Tweets) <= numTweets) && (i <= last.NumTweets); i++ {
+	for i := 0; (len(Tweets) < numTweets) && (i <= last.NumTweets); i++ {
 		Tweets = append(Tweets, Tweet{last.Tweets[i].Text, last.Tweets[i].Sentiment, last.Tweets[i].Id})
 	}
 
@@ -167,4 +168,24 @@ func main() {
 	}
 
 	os.Remove(filename)
+
+	// loop through new tweets, and respond to them.
+	for _, tweet := range tweetsResponse {
+		statusText := "#Trump is currently "
+		if average >= 0 {
+			statusText += "not "
+		}
+
+		statusText += "melting down!"
+		if average < 0 {
+			statusText = strings.ToUpper(statusText)
+		}
+		statusText = fmt.Sprintf("@realDonaldTrump %s http://www.isTrumpMeltingDown.com", statusText)
+
+
+		values := url.Values{}
+		values.Set("in_reply_to_status_id", fmt.Sprintf("%d", tweet.Id))
+		values.Set("auto_populate_reply_metadata", "true")
+		api.PostTweet(statusText, values)
+	}
 }
