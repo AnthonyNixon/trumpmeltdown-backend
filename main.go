@@ -15,7 +15,6 @@ import (
 	// Imports the Google Cloud Storage client package.
 	"cloud.google.com/go/storage"
 	"os"
-	"strings"
 )
 
 type TweetSentiment struct {
@@ -79,7 +78,7 @@ func main() {
 
 	var last TweetSentiment
 	json.Unmarshal(latestContents, &last)
-	latestTweet := last.Tweets[1]
+	latestTweet := last.Tweets[0]
 
 	values := url.Values{}
 	values.Set("screen_name", "realdonaldtrump")
@@ -96,9 +95,6 @@ func main() {
 	var totalSentiment float32
 
 	fmt.Printf("New Tweets: %d\n", len(tweetsResponse))
-	fmt.Println("Tweets: ")
-	//fmt.Printf("%v\n", tweetsResponse)
-	fmt.Println(len(tweetsResponse))
 
 	for i, tweet := range tweetsResponse {
 		sentiment, err := client.AnalyzeSentiment(ctx, &languagepb.AnalyzeSentimentRequest{
@@ -121,6 +117,27 @@ func main() {
 			fmt.Println("Sentiment: negative")
 		}
 		Tweets = append(Tweets, Tweet{tweet.FullText, sentiment.DocumentSentiment.Score, tweet.Id})
+
+		fmt.Printf("Posting tweet response to tweet ID %d\n", tweet.Id)
+
+		statusText := fmt.Sprintf("This Tweet scored %d%% meltdown. #Trump is currently ", (100 - int64((sentiment.DocumentSentiment.Score + 1) * 50)))
+		if sentiment.DocumentSentiment.Score >= 0 {
+			statusText += "not "
+		}
+
+		statusText += "melting down!"
+
+		statusTextFinal := fmt.Sprintf("@realDonaldTrump %s\nCheck it out here: http://www.isTrumpMeltingDown.com", statusText)
+
+
+		values := url.Values{}
+		values.Set("in_reply_to_status_id", fmt.Sprintf("%d", tweet.Id))
+		values.Set("auto_populate_reply_metadata", "true")
+
+		_, err = api.PostTweet(statusTextFinal, values)
+		if err != nil {
+			fmt.Println(err)
+		}
 	}
 
 	fmt.Printf("Number of tweets in latest file: %d\n", len(last.Tweets))
@@ -141,51 +158,47 @@ func main() {
 	jsonString, err := json.MarshalIndent(responseJson, "", "    ")
 	ioutil.WriteFile(filename, jsonString, 0644)
 
-	upload := bucket.Object(filename).NewWriter(ctx)
-	upload.ContentType = "application/json"
-	if _, err := upload.Write(jsonString); err != nil {
-		fmt.Printf("createFile: unable to write data to bucket %q, file %q: %v", bucketName, filename, err)
-		return
-	}
-	if err := upload.Close(); err != nil {
-		fmt.Printf("createFile: unable to close bucket %q, file %q: %v", bucketName, filename, err)
-		return
+	if len(tweetsResponse) > 0 {
+		fmt.Printf("New tweets exist. Publishing new file to bucket.\n")
+		upload := bucket.Object(filename).NewWriter(ctx)
+		upload.ContentType = "application/json"
+		if _, err := upload.Write(jsonString); err != nil {
+			fmt.Printf("createFile: unable to write data to bucket %q, file %q: %v", bucketName, filename, err)
+			return
+		}
+		if err := upload.Close(); err != nil {
+			fmt.Printf("createFile: unable to close bucket %q, file %q: %v", bucketName, filename, err)
+			return
+		}
+
+		src := storageClient.Bucket(bucketName).Object(filename)
+		dst := storageClient.Bucket(bucketName).Object("latest")
+
+		fmt.Println("Copying file...")
+		_, err = dst.CopierFrom(src).Run(ctx)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		fmt.Println("Setting permissions...")
+		acl := storageClient.Bucket(bucketName).Object("latest").ACL()
+		if err := acl.Set(ctx, storage.AllUsers, storage.RoleReader); err != nil {
+			log.Fatal(err)
+		}
 	}
 
-	src := storageClient.Bucket(bucketName).Object(filename)
-	dst := storageClient.Bucket(bucketName).Object("latest")
 
-	fmt.Println("Copying file...")
-	_, err = dst.CopierFrom(src).Run(ctx)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	fmt.Println("Setting permissions...")
-	acl := storageClient.Bucket(bucketName).Object("latest").ACL()
-	if err := acl.Set(ctx, storage.AllUsers, storage.RoleReader); err != nil {
-		log.Fatal(err)
-	}
 
 	os.Remove(filename)
 
-	// loop through new tweets, and respond to them.
-	for _, tweet := range tweetsResponse {
-		statusText := "#Trump is currently "
-		if average >= 0 {
-			statusText += "not "
-		}
-
-		statusText += "melting down!"
-		if average < 0 {
-			statusText = strings.ToUpper(statusText)
-		}
-		statusText = fmt.Sprintf("@realDonaldTrump %s http://www.isTrumpMeltingDown.com", statusText)
-
-
-		values := url.Values{}
-		values.Set("in_reply_to_status_id", fmt.Sprintf("%d", tweet.Id))
-		values.Set("auto_populate_reply_metadata", "true")
-		api.PostTweet(statusText, values)
-	}
+	//if len(tweetsResponse) > 0 {
+	//	fmt.Printf("Posting public tweet.\n")
+	//	values := url.Values{}
+	//
+	//	_, err = api.PostTweet(fmt.Sprintf("%s http://www.isTrumpMeltingDown.com", statusText), values)
+	//	if err != nil {
+	//		fmt.Println(err)
+	//	}
+	//
+	//}
 }
