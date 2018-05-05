@@ -1,40 +1,41 @@
 package main
 
 import (
-	"github.com/ChimeraCoder/anaconda"
 	"fmt"
 	"net/url"
+
+	"github.com/ChimeraCoder/anaconda"
 	// Imports the Google Cloud Natural Language API client package.
+	"encoding/json"
+	"io/ioutil"
+	"log"
+	"time"
+
 	language "cloud.google.com/go/language/apiv1"
 	"golang.org/x/net/context"
 	languagepb "google.golang.org/genproto/googleapis/cloud/language/v1"
-	"log"
-	"encoding/json"
-	"time"
-	"io/ioutil"
 	// Imports the Google Cloud Storage client package.
-	"cloud.google.com/go/storage"
 	"os"
+	"trumpmeltdown/phrases"
+
+	"cloud.google.com/go/storage"
 )
 
 type TweetSentiment struct {
-	Time int64
-	Tweets []Tweet
-	Average float32
-	NumTweets int
+	Time       int64
+	Tweets     []Tweet
+	Average    float32
+	NumTweets  int
 	NextUpdate int64
 }
 
 type Tweet struct {
-	Text string
+	Text      string
 	Sentiment float32
-	Id int64
-
+	Id        int64
 }
 
 var numTweets = 10
-
-
 
 func main() {
 
@@ -64,16 +65,20 @@ func main() {
 	bucketName := os.Getenv("TRUMPMELTDOWN_SENTIMENT_BUCKET")
 	bucket := storageClient.Bucket(bucketName)
 
-	latestReader, err := bucket.Object("latest").NewReader(ctx)
+	latestContents, err := ioutil.ReadFile("latest")
 	if err != nil {
 		fmt.Errorf("readFile: unable to open file from bucket %q, file %q: %v", bucketName, "latest", err)
-		return
-	}
-	defer latestReader.Close()
-	latestContents, err := ioutil.ReadAll(latestReader)
-	if err != nil {
-		fmt.Errorf("readFile: unable to read data from bucket %q, file %q: %v", bucketName, "latest", err)
-		return
+		latestReader, err := bucket.Object("latest").NewReader(ctx)
+		if err != nil {
+			fmt.Errorf("readFile: unable to open file from bucket %q, file %q: %v", bucketName, "latest", err)
+			return
+		}
+		defer latestReader.Close()
+		latestContents, err = ioutil.ReadAll(latestReader)
+		if err != nil {
+			fmt.Errorf("readFile: unable to read data from bucket %q, file %q: %v", bucketName, "latest", err)
+			return
+		}
 	}
 
 	var last TweetSentiment
@@ -90,11 +95,13 @@ func main() {
 		fmt.Println(err)
 	}
 
-
 	var Tweets []Tweet
 	var totalSentiment float32
 
+	numNewTweets := len(tweetsResponse)
 	fmt.Printf("New Tweets: %d\n", len(tweetsResponse))
+
+	var tweetsToSend []Tweet
 
 	for i, tweet := range tweetsResponse {
 		sentiment, err := client.AnalyzeSentiment(ctx, &languagepb.AnalyzeSentimentRequest{
@@ -117,27 +124,7 @@ func main() {
 			fmt.Println("Sentiment: negative")
 		}
 		Tweets = append(Tweets, Tweet{tweet.FullText, sentiment.DocumentSentiment.Score, tweet.Id})
-
-		fmt.Printf("Posting tweet response to tweet ID %d\n", tweet.Id)
-
-		statusText := fmt.Sprintf("This Tweet scored %d%% meltdown. #Trump is currently ", (100 - int64((sentiment.DocumentSentiment.Score + 1) * 50)))
-		if sentiment.DocumentSentiment.Score >= 0 {
-			statusText += "not "
-		}
-
-		statusText += "melting down!"
-
-		statusTextFinal := fmt.Sprintf("@realDonaldTrump %s\nCheck it out here: http://www.isTrumpMeltingDown.com", statusText)
-
-
-		values := url.Values{}
-		values.Set("in_reply_to_status_id", fmt.Sprintf("%d", tweet.Id))
-		values.Set("auto_populate_reply_metadata", "true")
-
-		_, err = api.PostTweet(statusTextFinal, values)
-		if err != nil {
-			fmt.Println(err)
-		}
+		tweetsToSend = append(tweetsToSend, Tweet{tweet.FullText, sentiment.DocumentSentiment.Score, tweet.Id})
 	}
 
 	fmt.Printf("Number of tweets in latest file: %d\n", len(last.Tweets))
@@ -157,11 +144,13 @@ func main() {
 	responseJson := TweetSentiment{currentTimestamp, Tweets, average, numTweets, nextUpdate}
 	jsonString, err := json.MarshalIndent(responseJson, "", "    ")
 	ioutil.WriteFile(filename, jsonString, 0644)
+	ioutil.WriteFile("latest", jsonString, 0644)
 
-	if len(tweetsResponse) > 0 {
+	if numNewTweets > 0 {
 		fmt.Printf("New tweets exist. Publishing new file to bucket.\n")
 		upload := bucket.Object(filename).NewWriter(ctx)
 		upload.ContentType = "application/json"
+		upload.CacheControl = "public, max-age=60"
 		if _, err := upload.Write(jsonString); err != nil {
 			fmt.Printf("createFile: unable to write data to bucket %q, file %q: %v", bucketName, filename, err)
 			return
@@ -185,9 +174,46 @@ func main() {
 		if err := acl.Set(ctx, storage.AllUsers, storage.RoleReader); err != nil {
 			log.Fatal(err)
 		}
+
 	}
 
+	trendingTowardMeltdown := false
+	if last.Average > average {
+		// Trending toward meltdown
+		trendingTowardMeltdown = true
+	}
 
+	for _, tweet := range tweetsToSend {
+		fmt.Printf("Posting tweet response to tweet ID %d\n", tweet.Id)
+
+		statusText := phrases.GetIntroPhrase(sentimentToMeltdown(tweet.Sentiment))
+		// TODO: Randomize this statement. Maybe use emojis and stuff.
+
+		if average >= 0 {
+			// Trump Average is not melting down
+			statusText += "#Trump is not currently melting down "
+			//Todo: insert random adjectives between is and trending
+			if trendingTowardMeltdown {
+				statusText += "but is trending toward a meltdown!"
+			}
+		} else {
+			statusText += "#TRUMP IS CURRENTLY MELTING DOWN "
+			if trendingTowardMeltdown {
+				statusText += "and we haven't seen the worst yet!"
+			}
+		}
+
+		statusTextFinal := fmt.Sprintf("@realDonaldTrump %s\nCheck it out here: http://www.isTrumpMeltingDown.com", statusText)
+
+		values := url.Values{}
+		values.Set("in_reply_to_status_id", fmt.Sprintf("%d", tweet.Id))
+		values.Set("auto_populate_reply_metadata", "true")
+
+		_, err = api.PostTweet(statusTextFinal, values)
+		if err != nil {
+			fmt.Println(err)
+		}
+	}
 
 	os.Remove(filename)
 
@@ -201,4 +227,8 @@ func main() {
 	//	}
 	//
 	//}
+}
+
+func sentimentToMeltdown(sentiment float32) int {
+	return int(100 - int64((sentiment+1)*50))
 }

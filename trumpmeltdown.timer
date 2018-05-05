@@ -1,11 +1,11 @@
 [Unit]
-Description=Runs trumpmeltdown every minute
+Description=Runs trumpmeltdown every 5 seconds
 
 [Timer]
 # Time to wait after booting before we run first time
 OnBootSec=5sec
 # Time between running each consecutive time
-OnUnitActiveSec=1m
+OnUnitActiveSec=5s
 Unit=trumpmeltdown.service
 
 [Install]
