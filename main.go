@@ -44,7 +44,7 @@ func main() {
 	rand.Seed(now.UTC().UnixNano())
 
 	currentTimestamp := now.Unix()
-	nextUpdate := now.Add(1 * time.Hour).Unix()
+	nextUpdate := now.Add(5 * time.Second).Unix()
 
 	consumerKey := os.Getenv("TRUMPMELTDOWN_CONSUMER_KEY")
 	consumerSecret := os.Getenv("TRUMPMELTDOWN_CONSUMER_SECRET")
