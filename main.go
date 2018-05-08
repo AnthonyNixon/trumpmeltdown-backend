@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"math/rand"
 	"net/url"
 
 	"github.com/ChimeraCoder/anaconda"
@@ -32,7 +33,7 @@ type TweetSentiment struct {
 type Tweet struct {
 	Text      string
 	Sentiment float32
-	Id        int64
+	Id        string
 }
 
 var numTweets = 10
@@ -40,6 +41,7 @@ var numTweets = 10
 func main() {
 
 	now := time.Now()
+	rand.Seed(now.UTC().UnixNano())
 
 	currentTimestamp := now.Unix()
 	nextUpdate := now.Add(1 * time.Hour).Unix()
@@ -88,7 +90,7 @@ func main() {
 	values := url.Values{}
 	values.Set("screen_name", "realdonaldtrump")
 	values.Set("count", fmt.Sprintf("%d", numTweets))
-	values.Set("since_id", fmt.Sprintf("%d", latestTweet.Id))
+	values.Set("since_id", fmt.Sprintf("%s", latestTweet.Id))
 
 	tweetsResponse, err := api.GetUserTimeline(values)
 	if err != nil {
@@ -123,8 +125,8 @@ func main() {
 		} else {
 			fmt.Println("Sentiment: negative")
 		}
-		Tweets = append(Tweets, Tweet{tweet.FullText, sentiment.DocumentSentiment.Score, tweet.Id})
-		tweetsToSend = append(tweetsToSend, Tweet{tweet.FullText, sentiment.DocumentSentiment.Score, tweet.Id})
+		Tweets = append(Tweets, Tweet{tweet.FullText, sentiment.DocumentSentiment.Score, fmt.Sprintf("%d", tweet.Id)})
+		tweetsToSend = append(tweetsToSend, Tweet{tweet.FullText, sentiment.DocumentSentiment.Score, fmt.Sprintf("%d", tweet.Id)})
 	}
 
 	fmt.Printf("Number of tweets in latest file: %d\n", len(last.Tweets))
@@ -206,7 +208,7 @@ func main() {
 		statusTextFinal := fmt.Sprintf("@realDonaldTrump %s\nCheck it out here: http://www.isTrumpMeltingDown.com", statusText)
 
 		values := url.Values{}
-		values.Set("in_reply_to_status_id", fmt.Sprintf("%d", tweet.Id))
+		values.Set("in_reply_to_status_id", fmt.Sprintf("%s", tweet.Id))
 		values.Set("auto_populate_reply_metadata", "true")
 
 		_, err = api.PostTweet(statusTextFinal, values)
