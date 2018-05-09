@@ -19,6 +19,8 @@ import (
 	"os"
 	"trumpmeltdown/phrases"
 
+	"flag"
+
 	"cloud.google.com/go/storage"
 )
 
@@ -39,6 +41,8 @@ type Tweet struct {
 var numTweets = 10
 
 func main() {
+	var testing = flag.Bool("testing", false, "enable testing mode. No actual tweeting or API calls.")
+	flag.Parse()
 
 	now := time.Now()
 	rand.Seed(now.UTC().UnixNano())
@@ -87,6 +91,10 @@ func main() {
 	json.Unmarshal(latestContents, &last)
 	latestTweet := last.Tweets[0]
 
+	if *testing {
+		latestTweet = last.Tweets[len(last.Tweets)-1]
+	}
+
 	values := url.Values{}
 	values.Set("screen_name", "realdonaldtrump")
 	values.Set("count", fmt.Sprintf("%d", numTweets))
@@ -106,27 +114,34 @@ func main() {
 	var tweetsToSend []Tweet
 
 	for i, tweet := range tweetsResponse {
-		sentiment, err := client.AnalyzeSentiment(ctx, &languagepb.AnalyzeSentimentRequest{
-			Document: &languagepb.Document{
-				Source: &languagepb.Document_Content{
-					Content: tweet.FullText,
+		if !*testing {
+			sentiment, err := client.AnalyzeSentiment(ctx, &languagepb.AnalyzeSentimentRequest{
+				Document: &languagepb.Document{
+					Source: &languagepb.Document_Content{
+						Content: tweet.FullText,
+					},
+					Type: languagepb.Document_PLAIN_TEXT,
 				},
-				Type: languagepb.Document_PLAIN_TEXT,
-			},
-			EncodingType: languagepb.EncodingType_UTF8,
-		})
-		if err != nil {
-			log.Fatalf("Failed to analyze text: %v", err)
-		}
+				EncodingType: languagepb.EncodingType_UTF8,
+			})
+			if err != nil {
+				log.Fatalf("Failed to analyze text: %v", err)
+			}
 
-		fmt.Printf("%d. Text: %v\n", i, tweet.FullText)
-		if sentiment.DocumentSentiment.Score >= 0 {
-			fmt.Println("Sentiment: positive")
+			fmt.Printf("%d. Text: %v\n", i, tweet.FullText)
+			if sentiment.DocumentSentiment.Score >= 0 {
+				fmt.Println("Sentiment: positive")
+			} else {
+				fmt.Println("Sentiment: negative")
+			}
+			Tweets = append(Tweets, Tweet{tweet.FullText, sentiment.DocumentSentiment.Score, fmt.Sprintf("%d", tweet.Id)})
+			tweetsToSend = append(tweetsToSend, Tweet{tweet.FullText, sentiment.DocumentSentiment.Score, fmt.Sprintf("%d", tweet.Id)})
 		} else {
-			fmt.Println("Sentiment: negative")
+			randSentiment := ((rand.Float32() * 2) - 1)
+			Tweets = append(Tweets, Tweet{tweet.FullText, randSentiment, fmt.Sprintf("%d", tweet.Id)})
+			tweetsToSend = append(tweetsToSend, Tweet{tweet.FullText, randSentiment, fmt.Sprintf("%d", tweet.Id)})
+
 		}
-		Tweets = append(Tweets, Tweet{tweet.FullText, sentiment.DocumentSentiment.Score, fmt.Sprintf("%d", tweet.Id)})
-		tweetsToSend = append(tweetsToSend, Tweet{tweet.FullText, sentiment.DocumentSentiment.Score, fmt.Sprintf("%d", tweet.Id)})
 	}
 
 	fmt.Printf("Number of tweets in latest file: %d\n", len(last.Tweets))
@@ -145,10 +160,13 @@ func main() {
 	filename := fmt.Sprintf("%d", currentTimestamp)
 	responseJson := TweetSentiment{currentTimestamp, Tweets, average, numTweets, nextUpdate}
 	jsonString, err := json.MarshalIndent(responseJson, "", "    ")
-	ioutil.WriteFile(filename, jsonString, 0644)
-	ioutil.WriteFile("latest", jsonString, 0644)
 
-	if numNewTweets > 0 {
+	if !*testing {
+		ioutil.WriteFile(filename, jsonString, 0644)
+		ioutil.WriteFile("latest", jsonString, 0644)
+	}
+
+	if numNewTweets > 0 && !*testing {
 		fmt.Printf("New tweets exist. Publishing new file to bucket.\n")
 		upload := bucket.Object(filename).NewWriter(ctx)
 		upload.ContentType = "application/json"
@@ -179,17 +197,12 @@ func main() {
 
 	}
 
-	trendingTowardMeltdown := false
-	if last.Average > average {
-		// Trending toward meltdown
-		trendingTowardMeltdown = true
-	}
+	trendingTowardMeltdown := last.Average > average
 
 	for _, tweet := range tweetsToSend {
-		fmt.Printf("Posting tweet response to tweet ID %d\n", tweet.Id)
-
 		statusText := phrases.GetIntroPhrase(sentimentToMeltdown(tweet.Sentiment))
 		// TODO: Randomize this statement. Maybe use emojis and stuff.
+		statusText += " "
 
 		if average >= 0 {
 			// Trump Average is not melting down
@@ -199,10 +212,7 @@ func main() {
 				statusText += "but is trending toward a meltdown!"
 			}
 		} else {
-			statusText += "#TRUMP IS CURRENTLY MELTING DOWN "
-			if trendingTowardMeltdown {
-				statusText += "and we haven't seen the worst yet!"
-			}
+			statusText += "#TRUMP IS CURRENTLY MELTING DOWN"
 		}
 
 		statusTextFinal := fmt.Sprintf("@realDonaldTrump %s\nCheck it out here: http://www.isTrumpMeltingDown.com", statusText)
@@ -211,10 +221,16 @@ func main() {
 		values.Set("in_reply_to_status_id", fmt.Sprintf("%s", tweet.Id))
 		values.Set("auto_populate_reply_metadata", "true")
 
-		_, err = api.PostTweet(statusTextFinal, values)
-		if err != nil {
-			fmt.Println(err)
+		if !*testing {
+			fmt.Printf("Posting tweet response to tweet ID %d\n", tweet.Id)
+			_, err = api.PostTweet(statusTextFinal, values)
+			if err != nil {
+				fmt.Println(err)
+			}
+		} else {
+			fmt.Printf("Tweet: %s\n\n", statusTextFinal)
 		}
+
 	}
 
 	os.Remove(filename)

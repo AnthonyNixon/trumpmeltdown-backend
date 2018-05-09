@@ -1,0 +1,41 @@
+{
+  "phrases": [
+    {
+      "format": "This Tweet is a %d%% meltdown.",
+      "type": "percentage"
+    },
+    {
+      "format": "This Tweet scores %s out of 10.",
+      "type": "repeat-char-out-of-10",
+      "char": "🔥"
+    },
+    {
+      "format": "%d out of 5 dentists think this tweet is a meltdown.",
+      "type": "out-of-5"
+    },
+    {
+      "format": "%d out of 10 trump supporters think this tweet is a meltdown.",
+      "type": "out-of-10"
+    },
+    {
+      "format": "If melting down causes small hands, this tweet means Trump's hands are %d%% smaller.",
+      "type": "percentage"
+    },
+    {
+      "format": "☝️This Tweet: %d%%☝",
+      "type": "percentage"
+    },
+    {
+      "format": "Even %d out of 10 Russian Trolls think this tweet is a meltdown.",
+      "type": "out-of-10"
+    },
+    {
+      "format": "Even Putin himself is %d%% sure this Tweet is a meltdown.",
+      "type": "percentage"
+    },
+    {
+      "format": "%d out of 10 paid off porn stars think this tweet is a meltdown.",
+      "type": "out-of-10"
+    }
+  ]
+}

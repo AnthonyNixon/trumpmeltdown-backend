@@ -1,31 +1,60 @@
 package phrases
 
 import (
+	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"math/rand"
+	"os"
 )
 
-const NUMINTROS = 6
+type JsonFile struct {
+	Phrases []Phrase `json:"phrases"`
+}
 
 func GetIntroPhrase(meltdownPct int) string {
-	switch rand.Int() % NUMINTROS {
-	case 0:
-		return fmt.Sprintf("This Tweet is a %d%% meltdown. ", meltdownPct)
-	case 1:
-		flameAmount := int(meltdownPct / 10)
-		flameString := ""
-		for i := 0; i < flameAmount; i++ {
-			flameString += "🔥"
-		}
-		return fmt.Sprintf("This Tweet scores %s out of 10. ", flameString)
-	case 2:
-		return fmt.Sprintf("%d out of 5 dentists think this tweet is a meltdown. ", int(meltdownPct/20)+1)
-	case 3:
-		return fmt.Sprintf("%d out of 10 trump supporters think this tweet is a meltdown. ", int(meltdownPct/10)+1)
-	case 4:
-		return fmt.Sprintf("If melting down causes small hands, this tweet means Trump's hands are %d%% smaller. ", meltdownPct)
-	case 5:
-		return fmt.Sprintf("☝️This Tweet: %d%%☝️", meltdownPct)
+	// Read the JSON file
+	jsonFile, err := os.Open("phrases.json")
+	if err != nil {
+		fmt.Errorf("%s\n", err)
 	}
-	return fmt.Sprintf("This Tweet is a %d%% meltdown. ", meltdownPct)
+	defer jsonFile.Close()
+	JsonContents, err := ioutil.ReadAll(jsonFile)
+	if err != nil {
+		fmt.Errorf("%s\n", err)
+	}
+
+	fmt.Printf("%d\n", len(JsonContents))
+	var jsonStruct JsonFile
+
+	err = json.Unmarshal(JsonContents, &jsonStruct)
+	if err != nil {
+		fmt.Errorf("%s\n", err)
+	}
+
+	// Parse into array of phrases
+	phrases := jsonStruct.Phrases
+
+	// Randomly Choose one
+	index := rand.Int() % len(phrases)
+	phrase := phrases[index]
+
+	// Parse it with a switch statement on the type
+	switch phrase.Type {
+	case "percentage":
+		return fmt.Sprintf(phrase.Format, meltdownPct)
+	case "repeat-char-out-of-10":
+		charAmount := int(meltdownPct/10) + 1
+		charString := ""
+		for i := 0; i < charAmount; i++ {
+			charString += phrase.Char
+		}
+		return fmt.Sprintf(phrase.Format, charString)
+	case "out-of-5":
+		return fmt.Sprintf(phrase.Format, int(meltdownPct/20)+1)
+	case "out-of-10":
+		return fmt.Sprintf(phrase.Format, int(meltdownPct/10)+1)
+	default:
+		return fmt.Sprintf("This Tweet is a %d%% meltdown.", meltdownPct)
+	}
 }
