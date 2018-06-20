@@ -30,7 +30,7 @@ type TweetSentiment struct {
 	Average       float32
 	NumTweets     int
 	NextUpdate    int64
-	LastSentTweet int64
+	LastSentTweet string
 }
 
 type Tweet struct {
@@ -190,7 +190,7 @@ func main() {
 			if err != nil {
 				fmt.Println(err)
 			}
-			responseJson.LastSentTweet = response.Id
+			responseJson.LastSentTweet = fmt.Sprintf("%s", response.Id)
 			fmt.Printf("Sent Tweet ID: %d\n", responseJson.LastSentTweet)
 		} else {
 			fmt.Printf("Tweet: %s\n\n", statusTextFinal)
