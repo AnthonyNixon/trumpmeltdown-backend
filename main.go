@@ -215,7 +215,7 @@ func main() {
 			statusText += "#TRUMP IS CURRENTLY MELTING DOWN"
 		}
 
-		statusTextFinal := fmt.Sprintf("@realDonaldTrump %s\nCheck it out here: http://www.isTrumpMeltingDown.com", statusText)
+		statusTextFinal := fmt.Sprintf("@realDonaldTrump %s\nCheck it out here: https://isTrumpMeltingDown.com", statusText)
 
 		values := url.Values{}
 		values.Set("in_reply_to_status_id", fmt.Sprintf("%s", tweet.Id))
