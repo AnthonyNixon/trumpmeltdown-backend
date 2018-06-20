@@ -159,7 +159,7 @@ func main() {
 	average := totalSentiment / float32(len(Tweets))
 	numTweets = len(Tweets)
 	filename := fmt.Sprintf("%d", currentTimestamp)
-	responseJson := TweetSentiment{currentTimestamp, Tweets, average, numTweets, nextUpdate, 0}
+	responseJson := TweetSentiment{currentTimestamp, Tweets, average, numTweets, nextUpdate, ""}
 
 	trendingTowardMeltdown := last.Average > average
 	for _, tweet := range tweetsToSend {
