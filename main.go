@@ -25,11 +25,12 @@ import (
 )
 
 type TweetSentiment struct {
-	Time       int64
-	Tweets     []Tweet
-	Average    float32
-	NumTweets  int
-	NextUpdate int64
+	Time          int64
+	Tweets        []Tweet
+	Average       float32
+	NumTweets     int
+	NextUpdate    int64
+	LastSentTweet int64
 }
 
 type Tweet struct {
@@ -158,7 +159,45 @@ func main() {
 	average := totalSentiment / float32(len(Tweets))
 	numTweets = len(Tweets)
 	filename := fmt.Sprintf("%d", currentTimestamp)
-	responseJson := TweetSentiment{currentTimestamp, Tweets, average, numTweets, nextUpdate}
+	responseJson := TweetSentiment{currentTimestamp, Tweets, average, numTweets, nextUpdate, 0}
+
+	trendingTowardMeltdown := last.Average > average
+	for _, tweet := range tweetsToSend {
+		statusText := phrases.GetIntroPhrase(sentimentToMeltdown(tweet.Sentiment))
+		// TODO: Randomize this statement. Maybe use emojis and stuff.
+		statusText += " "
+
+		if average >= 0 {
+			// Trump Average is not melting down
+			statusText += "#Trump is not currently melting down "
+			//Todo: insert random adjectives between is and trending
+			if trendingTowardMeltdown {
+				statusText += "but is trending toward a meltdown!"
+			}
+		} else {
+			statusText += "#TRUMP IS CURRENTLY MELTING DOWN"
+		}
+
+		statusTextFinal := fmt.Sprintf("@realDonaldTrump %s\nCheck it out here: https://isTrumpMeltingDown.com", statusText)
+
+		values := url.Values{}
+		values.Set("in_reply_to_status_id", fmt.Sprintf("%s", tweet.Id))
+		values.Set("auto_populate_reply_metadata", "true")
+
+		if !*testing {
+			fmt.Printf("Posting tweet response to tweet ID %d\n", tweet.Id)
+			response, err := api.PostTweet(statusTextFinal, values)
+			if err != nil {
+				fmt.Println(err)
+			}
+			responseJson.LastSentTweet = response.Id
+			fmt.Printf("Sent Tweet ID: %d\n", responseJson.LastSentTweet)
+		} else {
+			fmt.Printf("Tweet: %s\n\n", statusTextFinal)
+		}
+
+	}
+
 	jsonString, err := json.MarshalIndent(responseJson, "", "    ")
 
 	if !*testing {
@@ -197,54 +236,8 @@ func main() {
 
 	}
 
-	trendingTowardMeltdown := last.Average > average
-
-	for _, tweet := range tweetsToSend {
-		statusText := phrases.GetIntroPhrase(sentimentToMeltdown(tweet.Sentiment))
-		// TODO: Randomize this statement. Maybe use emojis and stuff.
-		statusText += " "
-
-		if average >= 0 {
-			// Trump Average is not melting down
-			statusText += "#Trump is not currently melting down "
-			//Todo: insert random adjectives between is and trending
-			if trendingTowardMeltdown {
-				statusText += "but is trending toward a meltdown!"
-			}
-		} else {
-			statusText += "#TRUMP IS CURRENTLY MELTING DOWN"
-		}
-
-		statusTextFinal := fmt.Sprintf("@realDonaldTrump %s\nCheck it out here: https://isTrumpMeltingDown.com", statusText)
-
-		values := url.Values{}
-		values.Set("in_reply_to_status_id", fmt.Sprintf("%s", tweet.Id))
-		values.Set("auto_populate_reply_metadata", "true")
-
-		if !*testing {
-			fmt.Printf("Posting tweet response to tweet ID %d\n", tweet.Id)
-			_, err = api.PostTweet(statusTextFinal, values)
-			if err != nil {
-				fmt.Println(err)
-			}
-		} else {
-			fmt.Printf("Tweet: %s\n\n", statusTextFinal)
-		}
-
-	}
-
 	os.Remove(filename)
 
-	//if len(tweetsResponse) > 0 {
-	//	fmt.Printf("Posting public tweet.\n")
-	//	values := url.Values{}
-	//
-	//	_, err = api.PostTweet(fmt.Sprintf("%s http://www.isTrumpMeltingDown.com", statusText), values)
-	//	if err != nil {
-	//		fmt.Println(err)
-	//	}
-	//
-	//}
 }
 
 func sentimentToMeltdown(sentiment float32) int {
