@@ -17,11 +17,12 @@ import (
 	languagepb "google.golang.org/genproto/googleapis/cloud/language/v1"
 	// Imports the Google Cloud Storage client package.
 	"os"
-	"trumpmeltdown/phrases"
+	"github.com/trumpmeltdown-backend/phrases"
 
 	"flag"
 
 	"cloud.google.com/go/storage"
+	"github.com/joho/sqltocsv"
 )
 
 type TweetSentiment struct {
@@ -43,6 +44,7 @@ var numTweets = 10
 
 func main() {
 	var testing = flag.Bool("testing", false, "enable testing mode. No actual tweeting or API calls.")
+	var machineLearning = flag.Bool("machinelearning", false, "run machine learning logic.")
 	flag.Parse()
 
 	now := time.Now()
@@ -238,6 +240,14 @@ func main() {
 
 	os.Remove(filename)
 
+
+	if *machineLearning {
+		fmt.Printf("\n===Running Machine learning logic\n===\n")
+
+		// Get all rows in the database
+		//rows, _ := db.Query("SELECT * FROM users WHERE something=72")
+		// https://github.com/joho/sqltocsv
+	}
 }
 
 func sentimentToMeltdown(sentiment float32) int {
