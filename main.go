@@ -17,6 +17,7 @@ import (
 	languagepb "google.golang.org/genproto/googleapis/cloud/language/v1"
 	// Imports the Google Cloud Storage client package.
 	"os"
+
 	"trumpmeltdown/phrases"
 
 	"flag"
@@ -28,6 +29,7 @@ import (
 	"unicode"
 
 	_ "github.com/go-sql-driver/mysql"
+	"github.com/joho/sqltocsv"
 )
 
 type TweetSentiment struct {
@@ -49,6 +51,7 @@ var numTweets = 10
 
 func main() {
 	var testing = flag.Bool("testing", false, "enable testing mode. No actual tweeting or API calls.")
+	var machineLearning = flag.Bool("machinelearning", false, "run machine learning logic.")
 	flag.Parse()
 
 	now := time.Now()
@@ -214,6 +217,7 @@ func main() {
 		statusText := phrases.GetIntroPhrase(sentimentToMeltdown(tweet.Sentiment))
 		// TODO: Randomize this statement. Maybe use emojis and stuff.
 		statusText += " "
+		statusText += " "
 
 		if average >= 0 {
 			// Trump Average is not melting down
@@ -286,6 +290,21 @@ func main() {
 
 	os.Remove(filename)
 
+	if *machineLearning {
+		fmt.Printf("\n===Running Machine learning logic\n===\n")
+
+		//Get all rows in the database
+		rows, _ := db.Query("SELECT id, sentiment, caps_percentage, length, not_meltdown_votes, meltdown_votes FROM tweets")
+		_, err := os.Create("tweet_data.csv")
+		if err != nil {
+			panic(err)
+		}
+
+		err = sqltocsv.WriteFile("tweet_data.csv", rows)
+		if err != nil {
+			panic(err)
+		}
+	}
 }
 
 func sentimentToMeltdown(sentiment float32) int {
