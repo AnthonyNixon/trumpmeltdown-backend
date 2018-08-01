@@ -1,0 +1,58 @@
+{
+    "Time": 1525841947,
+    "Tweets": [
+        {
+            "Text": "The Iran Deal is defective at its core. If we do nothing, we know what will happen. In just a short time, the world’s leading state sponsor of terror will be on the cusp of acquiring the world’s most dangerous weapons.... https://t.co/58qwBLzxIH",
+            "Sentiment": -0.3,
+            "Id": "993976643898281984"
+        },
+        {
+            "Text": "RT @WhiteHouse: \"Finally, I want to deliver a message to the long-suffering people of Iran. The people of America stand with you.\" https://…",
+            "Sentiment": 0.1,
+            "Id": "993952097610731521"
+        },
+        {
+            "Text": "RT @WhiteHouse: \"At the heart of the Iran deal was a giant fiction: that a murderous regime desired only a peaceful nuclear energy program.…",
+            "Sentiment": 0.2,
+            "Id": "993952088123170817"
+        },
+        {
+            "Text": "Statement on the Iran Nuclear Deal: https://t.co/O3SpryCKkc",
+            "Sentiment": 0.1,
+            "Id": "993926510003277825"
+        },
+        {
+            "Text": "John Kerry can’t get over the fact that he had his chance and blew it! Stay away from negotiations John, you are hurting your country!",
+            "Sentiment": -0.2,
+            "Id": "993815373190492160"
+        },
+        {
+            "Text": "I will be speaking to my friend, President Xi of China, this morning at 8:30. The primary topics will be Trade, where good things will happen, and North Korea, where relationships and trust are building.",
+            "Sentiment": 0.2,
+            "Id": "993813485745295360"
+        },
+        {
+            "Text": "Gina Haspel, my highly respected nominee to lead the CIA, is being praised for the fact that she has been, and alway will be, TOUGH ON TERROR! This is a woman who has been a leader wherever she has gone. The CIA wants her to lead them into America’s  bright and glorious future!",
+            "Sentiment": 0.3,
+            "Id": "993810085540491264"
+        },
+        {
+            "Text": "I will be announcing my decision on the Iran Deal tomorrow from the White House at 2:00pm.",
+            "Sentiment": 0,
+            "Id": "993562242124865536"
+        },
+        {
+            "Text": "National Prescription Drug #TakeBackDay numbers are in! Another record broken: nearly 1 MILLION pounds of Rx pills disposed! Let’s keep fighting this opioid epidemic, America!",
+            "Sentiment": -0.2,
+            "Id": "993541175511527425"
+        },
+        {
+            "Text": "The United States does not need John Kerry’s possibly illegal Shadow Diplomacy on the very badly negotiated Iran Deal.  He was the one that created this MESS in the first place!",
+            "Sentiment": -0.5,
+            "Id": "993492804985872385"
+        }
+    ],
+    "Average": -0.030000001,
+    "NumTweets": 10,
+    "NextUpdate": 1525841952
+}

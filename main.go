@@ -22,6 +22,12 @@ import (
 	"flag"
 
 	"cloud.google.com/go/storage"
+
+	"database/sql"
+
+	"unicode"
+
+	_ "github.com/go-sql-driver/mysql"
 )
 
 type TweetSentiment struct {
@@ -56,9 +62,15 @@ func main() {
 	accessToken := os.Getenv("TRUMPMELTDOWN_ACCESS_TOKEN")
 	accessSecret := os.Getenv("TRUMPMELTDOWN_ACCESS_SECRET")
 
+	DB_USER := os.Getenv("TRUMPMELTDOWN_DBUSER")
+	DB_PASS := os.Getenv("TRUMPMELTDOWN_DBPASS")
+	DB_HOST := os.Getenv("DBHOST")
+
 	anaconda.SetConsumerKey(consumerKey)
 	anaconda.SetConsumerSecret(consumerSecret)
 	api := anaconda.NewTwitterApi(accessToken, accessSecret)
+
+	dsn := DB_USER + ":" + DB_PASS + "@tcp(" + DB_HOST + ":3306)/trumpmeltdown?parseTime=true"
 
 	ctx := context.Background()
 	client, err := language.NewClient(ctx)
@@ -114,6 +126,19 @@ func main() {
 
 	var tweetsToSend []Tweet
 
+	db, err := sql.Open("mysql", dsn)
+	if err != nil {
+		fmt.Print(err.Error())
+	}
+	defer db.Close()
+	// make sure our connection is available
+	err = db.Ping()
+	if err != nil {
+		fmt.Print(err.Error())
+	}
+
+	var stmt *sql.Stmt
+
 	for i, tweet := range tweetsResponse {
 		if !*testing {
 			sentiment, err := client.AnalyzeSentiment(ctx, &languagepb.AnalyzeSentimentRequest{
@@ -137,12 +162,35 @@ func main() {
 			}
 			Tweets = append(Tweets, Tweet{tweet.FullText, sentiment.DocumentSentiment.Score, fmt.Sprintf("%d", tweet.Id)})
 			tweetsToSend = append(tweetsToSend, Tweet{tweet.FullText, sentiment.DocumentSentiment.Score, fmt.Sprintf("%d", tweet.Id)})
+			stmt, err = db.Prepare("insert into tweets (sentiment, time_of_day, time_since_last_tweet, caps_percentage, length, grammar_mistake_count, isRetweet, tweet_id, tweet_text) values(?,?,?,?,?,?,?,?,?);")
+			if err != nil {
+				fmt.Print(err.Error())
+			}
+			_, err = stmt.Exec(sentimentToMeltdown(sentiment.DocumentSentiment.Score), nil, nil, calculateCapsPercentage(tweet.FullText), len(tweet.FullText), 0, 0, tweet.Id, tweet.FullText)
+
+			if err != nil {
+				fmt.Print(err.Error())
+			}
+
+			defer stmt.Close()
 		} else {
 			randSentiment := ((rand.Float32() * 2) - 1)
 			Tweets = append(Tweets, Tweet{tweet.FullText, randSentiment, fmt.Sprintf("%d", tweet.Id)})
 			tweetsToSend = append(tweetsToSend, Tweet{tweet.FullText, randSentiment, fmt.Sprintf("%d", tweet.Id)})
+			stmt, err = db.Prepare("insert into tweets (sentiment, time_of_day, time_since_last_tweet, caps_percentage, length, grammar_mistake_count, isRetweet, tweet_id, tweet_text) values(?,?,?,?,?,?,?,?,?);")
+			if err != nil {
+				fmt.Print(err.Error())
+			}
 
+			_, err = stmt.Exec(sentimentToMeltdown(randSentiment), nil, nil, calculateCapsPercentage(tweet.FullText), len(tweet.FullText), 0, 0, tweet.Id, tweet.FullText)
+
+			if err != nil {
+				fmt.Print(err.Error())
+			}
+
+			defer stmt.Close()
 		}
+
 	}
 
 	fmt.Printf("Number of tweets in latest file: %d\n", len(last.Tweets))
@@ -242,4 +290,20 @@ func main() {
 
 func sentimentToMeltdown(sentiment float32) int {
 	return int(100 - int64((sentiment+1)*50))
+}
+
+func calculateCapsPercentage(tweetText string) int {
+	totalChars := 0
+	totalCapitals := 0
+
+	for _, char := range tweetText {
+		if unicode.IsLetter(char) {
+			if unicode.IsUpper(char) {
+				totalCapitals++
+			}
+			totalChars++
+		}
+	}
+
+	return int((float32(totalCapitals) / float32(totalChars)) * 100)
 }
