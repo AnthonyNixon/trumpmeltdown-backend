@@ -45,6 +45,7 @@ type Tweet struct {
 	Text      string
 	Sentiment float32
 	Id        string
+	EmbedHTML string
 }
 
 var numTweets = 10
@@ -143,6 +144,16 @@ func main() {
 	var stmt *sql.Stmt
 
 	for i, tweet := range tweetsResponse {
+		// Get Embed HTML for Tweet
+		values := url.Values{}
+		values.Set("omit_script", "true")
+		values.Set("align", "center")
+		values.Set("related", "istrumpmeltdown")
+
+		oembed, err := api.GetOEmbedId(tweet.Id, values)
+		if err != nil {
+			fmt.Printf("err: %s", err)
+		}
 		if !*testing {
 			sentiment, err := client.AnalyzeSentiment(ctx, &languagepb.AnalyzeSentimentRequest{
 				Document: &languagepb.Document{
@@ -163,8 +174,9 @@ func main() {
 			} else {
 				fmt.Println("Sentiment: negative")
 			}
-			Tweets = append(Tweets, Tweet{tweet.FullText, sentiment.DocumentSentiment.Score, fmt.Sprintf("%d", tweet.Id)})
-			tweetsToSend = append(tweetsToSend, Tweet{tweet.FullText, sentiment.DocumentSentiment.Score, fmt.Sprintf("%d", tweet.Id)})
+
+			Tweets = append(Tweets, Tweet{tweet.FullText, sentiment.DocumentSentiment.Score, fmt.Sprintf("%d", tweet.Id), oembed.Html})
+			tweetsToSend = append(tweetsToSend, Tweet{tweet.FullText, sentiment.DocumentSentiment.Score, fmt.Sprintf("%d", tweet.Id), oembed.Html})
 			stmt, err = db.Prepare("insert into tweets (sentiment, time_of_day, time_since_last_tweet, caps_percentage, length, grammar_mistake_count, isRetweet, tweet_id, tweet_text) values(?,?,?,?,?,?,?,?,?);")
 			if err != nil {
 				fmt.Print(err.Error())
@@ -178,20 +190,20 @@ func main() {
 			defer stmt.Close()
 		} else {
 			randSentiment := ((rand.Float32() * 2) - 1)
-			Tweets = append(Tweets, Tweet{tweet.FullText, randSentiment, fmt.Sprintf("%d", tweet.Id)})
-			tweetsToSend = append(tweetsToSend, Tweet{tweet.FullText, randSentiment, fmt.Sprintf("%d", tweet.Id)})
-			stmt, err = db.Prepare("insert into tweets (sentiment, time_of_day, time_since_last_tweet, caps_percentage, length, grammar_mistake_count, isRetweet, tweet_id, tweet_text) values(?,?,?,?,?,?,?,?,?);")
-			if err != nil {
-				fmt.Print(err.Error())
-			}
+			Tweets = append(Tweets, Tweet{tweet.FullText, randSentiment, fmt.Sprintf("%d", tweet.Id), oembed.Html})
+			tweetsToSend = append(tweetsToSend, Tweet{tweet.FullText, randSentiment, fmt.Sprintf("%d", tweet.Id), oembed.Html})
+			//stmt, err = db.Prepare("insert into tweets (sentiment, time_of_day, time_since_last_tweet, caps_percentage, length, grammar_mistake_count, isRetweet, tweet_id, tweet_text) values(?,?,?,?,?,?,?,?,?);")
+			//if err != nil {
+			//	fmt.Print(err.Error())
+			//}
+			//
+			//_, err = stmt.Exec(sentimentToMeltdown(randSentiment), nil, nil, calculateCapsPercentage(tweet.FullText), len(tweet.FullText), 0, 0, tweet.Id, tweet.FullText)
+			//
+			//if err != nil {
+			//	fmt.Print(err.Error())
+			//}
 
-			_, err = stmt.Exec(sentimentToMeltdown(randSentiment), nil, nil, calculateCapsPercentage(tweet.FullText), len(tweet.FullText), 0, 0, tweet.Id, tweet.FullText)
-
-			if err != nil {
-				fmt.Print(err.Error())
-			}
-
-			defer stmt.Close()
+			//defer stmt.Close()
 		}
 
 	}
@@ -200,7 +212,7 @@ func main() {
 	fmt.Printf("Tweets contains %d, adding %d more...\n", len(Tweets), (numTweets - len(Tweets)))
 
 	for i := 0; (len(Tweets) < numTweets) && (i <= last.NumTweets); i++ {
-		Tweets = append(Tweets, Tweet{last.Tweets[i].Text, last.Tweets[i].Sentiment, last.Tweets[i].Id})
+		Tweets = append(Tweets, Tweet{last.Tweets[i].Text, last.Tweets[i].Sentiment, last.Tweets[i].Id, last.Tweets[i].EmbedHTML})
 	}
 
 	for _, tweet := range Tweets {
@@ -255,6 +267,8 @@ func main() {
 	if !*testing {
 		ioutil.WriteFile(filename, jsonString, 0644)
 		ioutil.WriteFile("latest", jsonString, 0644)
+	} else {
+		ioutil.WriteFile("testjson", jsonString, 0644)
 	}
 
 	if numNewTweets > 0 && !*testing {
