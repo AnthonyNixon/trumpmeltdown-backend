@@ -4,8 +4,8 @@ steps:
   env: ['GOPATH=/gopath']
 - name: 'gcr.io/cloud-builders/go'
   env: ['GOPATH=/gopath']
-  args: ['build', 'main']
+  args: ['build']
 artifacts:
   objects:
     location: 'gs://ajnhosting-binaries/trumpmeltdown'
-    paths: ['trumpmeltdown-$REVISION_ID']
+    paths: ['trumpmeltdown-backend']
