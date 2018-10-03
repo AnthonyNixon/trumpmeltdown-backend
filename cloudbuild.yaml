@@ -1,9 +1,9 @@
 steps:
 - name: 'gcr.io/cloud-builders/go'
-  args: ['get', './...']
+  args: ['get', '-d', './...']
   env: ['PROJECT_ROOT=github.com/ajn0592/trumpmeltdown-backend']
 - name: 'gcr.io/cloud-builders/go'
-  args: ['install', '.']
+  args: ['install', 'main.go']
   env: ['PROJECT_ROOT=github.com/ajn0592/trumpmeltdown-backend']
 artifacts:
   objects:
