@@ -1,0 +1,9 @@
+steps:
+- name: 'gcr.io/cloud-builders/go'
+  args: ['install', '.']
+- name: 'gcr.io/cloud-builders/go'
+  args: ['build', 'main']
+artifacts:
+  objects:
+    location: 'gs://ajnhosting-binaries/trumpmeltdown'
+    paths: ['trumpmeltdown-$REVISION_ID']
