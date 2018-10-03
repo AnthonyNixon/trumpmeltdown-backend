@@ -1,7 +1,9 @@
 steps:
 - name: 'gcr.io/cloud-builders/go'
-  args: ['install', '.']
+  args: ['get', '-d', './...']
+  env: ['GOPATH=/gopath']
 - name: 'gcr.io/cloud-builders/go'
+  env: ['GOPATH=/gopath']
   args: ['build', 'main']
 artifacts:
   objects:
