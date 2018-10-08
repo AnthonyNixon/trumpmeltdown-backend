@@ -1,10 +1,10 @@
 steps:
 - name: 'gcr.io/cloud-builders/go'
-  args: ['get', '-d', './...']
-  env: ['GOPATH=/gopath']
+  args: ['install', '.']
+  env: ['PROJECT_ROOT=trumpmeltdown-backend']
 - name: 'gcr.io/cloud-builders/go'
-  args: ['install', 'main.go']
-  env: ['GOPATH=/gopath']
+  args: ['build', 'main.go']
+  env: ['PROJECT_ROOT=trumpmeltdown-backend']
 artifacts:
   objects:
     location: 'gs://ajnhosting-binaries/trumpmeltdown'
