@@ -1,6 +1,6 @@
 steps:
 - name: 'gcr.io/cloud-builders/go'
-  args: ['install', '.']
+  args: ['install', 'trumpmeltdown-backend']
   env: [GOPATH=.']
 - name: 'gcr.io/cloud-builders/go'
   args: ['build', 'main.go']
