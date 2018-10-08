@@ -5,4 +5,4 @@ steps:
 artifacts:
   objects:
     location: 'gs://ajnhosting-binaries/trumpmeltdown'
-    paths: ['/gopath/bin/trumpmeltdown-backend']
+    paths: ['trumpmeltdown-backend']
