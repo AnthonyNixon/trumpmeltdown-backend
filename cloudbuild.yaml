@@ -5,4 +5,4 @@ steps:
 artifacts:
   objects:
     location: 'gs://ajnhosting-binaries'
-    paths: ['/gopath/bin/*']
+    paths: ['/workspace/gopath/bin/trump*']
