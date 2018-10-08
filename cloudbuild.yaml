@@ -4,5 +4,5 @@ steps:
   env: ["PROJECT_ROOT=github.com/ajn0592/trumpmeltdown-backend"]
 artifacts:
   objects:
-    location: 'gs://ajnhosting-binaries'
+    location: 'gs://ajnhosting-binaries/trumpmeltdown'
     paths: ['/workspace/gopath/bin/trump*']
