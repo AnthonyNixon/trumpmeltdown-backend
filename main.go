@@ -177,11 +177,11 @@ func main() {
 
 			Tweets = append(Tweets, Tweet{tweet.FullText, sentiment.DocumentSentiment.Score, fmt.Sprintf("%d", tweet.Id), oembed.Html})
 			tweetsToSend = append(tweetsToSend, Tweet{tweet.FullText, sentiment.DocumentSentiment.Score, fmt.Sprintf("%d", tweet.Id), oembed.Html})
-			stmt, err = db.Prepare("insert into tweets (sentiment, time_of_day, time_since_last_tweet, caps_percentage, length, grammar_mistake_count, isRetweet, tweet_id, tweet_text) values(?,?,?,?,?,?,?,?,?);")
+			stmt, err = db.Prepare("insert into tweets (sentiment, time_of_day, time_since_last_tweet, caps_percentage, length, grammar_mistake_count, isRetweet, tweet_id, tweet_text, html) values(?,?,?,?,?,?,?,?,?,?);")
 			if err != nil {
 				fmt.Print(err.Error())
 			}
-			_, err = stmt.Exec(sentimentToMeltdown(sentiment.DocumentSentiment.Score), nil, nil, calculateCapsPercentage(tweet.FullText), len(tweet.FullText), 0, 0, tweet.Id, tweet.FullText)
+			_, err = stmt.Exec(sentimentToMeltdown(sentiment.DocumentSentiment.Score), nil, nil, calculateCapsPercentage(tweet.FullText), len(tweet.FullText), 0, 0, tweet.Id, tweet.FullText, oembed.Html)
 
 			if err != nil {
 				fmt.Print(err.Error())
@@ -192,18 +192,6 @@ func main() {
 			randSentiment := ((rand.Float32() * 2) - 1)
 			Tweets = append(Tweets, Tweet{tweet.FullText, randSentiment, fmt.Sprintf("%d", tweet.Id), oembed.Html})
 			tweetsToSend = append(tweetsToSend, Tweet{tweet.FullText, randSentiment, fmt.Sprintf("%d", tweet.Id), oembed.Html})
-			//stmt, err = db.Prepare("insert into tweets (sentiment, time_of_day, time_since_last_tweet, caps_percentage, length, grammar_mistake_count, isRetweet, tweet_id, tweet_text) values(?,?,?,?,?,?,?,?,?);")
-			//if err != nil {
-			//	fmt.Print(err.Error())
-			//}
-			//
-			//_, err = stmt.Exec(sentimentToMeltdown(randSentiment), nil, nil, calculateCapsPercentage(tweet.FullText), len(tweet.FullText), 0, 0, tweet.Id, tweet.FullText)
-			//
-			//if err != nil {
-			//	fmt.Print(err.Error())
-			//}
-
-			//defer stmt.Close()
 		}
 
 	}
