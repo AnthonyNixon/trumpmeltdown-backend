@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"github.com/ajn0592/trumpmeltdown-backend/phrases"
 	"math/rand"
 	"net/url"
 
@@ -17,8 +18,6 @@ import (
 	languagepb "google.golang.org/genproto/googleapis/cloud/language/v1"
 	// Imports the Google Cloud Storage client package.
 	"os"
-
-	"trumpmeltdown/phrases"
 
 	"flag"
 
