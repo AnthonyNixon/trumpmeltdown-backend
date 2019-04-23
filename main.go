@@ -89,16 +89,16 @@ func main() {
 
 	latestContents, err := ioutil.ReadFile("latest")
 	if err != nil {
-		fmt.Errorf("readFile: unable to open file from bucket %q, file %q: %v", bucketName, "latest", err)
+		print(fmt.Errorf("readFile: unable to open file from bucket %q, file %q: %v", bucketName, "latest", err))
 		latestReader, err := bucket.Object("latest").NewReader(ctx)
 		if err != nil {
-			fmt.Errorf("readFile: unable to open file from bucket %q, file %q: %v", bucketName, "latest", err)
+			print(fmt.Errorf("readFile: unable to open file from bucket %q, file %q: %v", bucketName, "latest", err))
 			return
 		}
 		defer latestReader.Close()
 		latestContents, err = ioutil.ReadAll(latestReader)
 		if err != nil {
-			fmt.Errorf("readFile: unable to read data from bucket %q, file %q: %v", bucketName, "latest", err)
+			print(fmt.Errorf("readFile: unable to read data from bucket %q, file %q: %v", bucketName, "latest", err))
 			return
 		}
 	}
@@ -229,7 +229,7 @@ func main() {
 			statusText += "#TRUMP IS CURRENTLY MELTING DOWN"
 		}
 
-		statusTextFinal := fmt.Sprintf("@realDonaldTrump %s\nCheck it out here: https://isTrumpMeltingDown.com", statusText)
+		statusTextFinal := fmt.Sprintf("@realDonaldTrump %s\nCheck it out here: https://isTrumpMeltingDown.com?id=%s", statusText, tweet.Id)
 
 		values := url.Values{}
 		values.Set("in_reply_to_status_id", fmt.Sprintf("%s", tweet.Id))
