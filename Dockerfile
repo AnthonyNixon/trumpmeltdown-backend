@@ -7,6 +7,7 @@ RUN CGO_ENABLED=0 GOOS=linux go build -v -o trumpmeltdown-backend-http
 
 FROM alpine
 COPY --from=builder /go/src/github.com/anthonynixon/trumpmeltdown-backend/trumpmeltdown-backend-http /trumpmeltdown-backend-http
+COPY phrases.json /phrases.json
 RUN chmod +x /trumpmeltdown-backend-http
 
 RUN apk update \

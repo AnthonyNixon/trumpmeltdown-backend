@@ -122,7 +122,7 @@ func isTrumpMeltingDown(testing bool, machineLearning bool) {
 
 	latestContents, err := ioutil.ReadFile("latest")
 	if err != nil {
-		log.Print(fmt.Errorf("readFile: unable to open file from bucket %q, file %q: %v", bucketName, "latest", err))
+		log.Print("latest file not found locally. Reaching out to bucket.")
 		latestReader, err := bucket.Object("latest").NewReader(ctx)
 		if err != nil {
 			log.Print(fmt.Errorf("readFile: unable to open file from bucket %q, file %q: %v", bucketName, "latest", err))
