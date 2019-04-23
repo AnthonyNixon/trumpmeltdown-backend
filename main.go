@@ -2,9 +2,10 @@ package main
 
 import (
 	"fmt"
-	"github.com/ajn0592/trumpmeltdown-backend/phrases"
 	"math/rand"
+	"net/http"
 	"net/url"
+	"strings"
 
 	"github.com/ChimeraCoder/anaconda"
 	// Imports the Google Cloud Natural Language API client package.
@@ -13,7 +14,7 @@ import (
 	"log"
 	"time"
 
-	language "cloud.google.com/go/language/apiv1"
+	"cloud.google.com/go/language/apiv1"
 	"golang.org/x/net/context"
 	languagepb "google.golang.org/genproto/googleapis/cloud/language/v1"
 	// Imports the Google Cloud Storage client package.
@@ -50,8 +51,39 @@ type Tweet struct {
 var numTweets = 10
 
 func main() {
-	var testing = flag.Bool("testing", false, "enable testing mode. No actual tweeting or API calls.")
-	var machineLearning = flag.Bool("machinelearning", false, "run machine learning logic.")
+	log.Print("Running IsTrumpMeltingDown bot.")
+	http.HandleFunc("/", handler)
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8080"
+	}
+
+	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%s", port), nil))
+}
+
+func handler(w http.ResponseWriter, r *http.Request) {
+	log.Print("Request Receieved.")
+	testing := true
+	machineLearning := true
+
+	testParam := r.URL.Query().Get("testing")
+	MLParam := r.URL.Query().Get("machineLearning")
+
+	if strings.ToLower(testParam) != "true" {
+		testing = false
+	}
+
+	if strings.ToLower(MLParam) != "true" {
+		machineLearning = false
+	}
+
+	isTrumpMeltingDown(testing, machineLearning)
+}
+
+func isTrumpMeltingDown(testing bool, machineLearning bool) {
+
+	//var testing = flag.Bool("testing", false, "enable testing mode. No actual tweeting or API calls.")
+	//var machineLearning = flag.Bool("machinelearning", false, "run machine learning logic.")
 	flag.Parse()
 
 	now := time.Now()
@@ -107,7 +139,7 @@ func main() {
 	json.Unmarshal(latestContents, &last)
 	latestTweet := last.Tweets[0]
 
-	if *testing {
+	if testing {
 		latestTweet = last.Tweets[len(last.Tweets)-1]
 	}
 
@@ -153,7 +185,7 @@ func main() {
 		if err != nil {
 			fmt.Printf("err: %s", err)
 		}
-		if !*testing {
+		if !testing {
 			sentiment, err := client.AnalyzeSentiment(ctx, &languagepb.AnalyzeSentimentRequest{
 				Document: &languagepb.Document{
 					Source: &languagepb.Document_Content{
@@ -213,7 +245,7 @@ func main() {
 
 	trendingTowardMeltdown := last.Average > average
 	for _, tweet := range tweetsToSend {
-		statusText := phrases.GetIntroPhrase(sentimentToMeltdown(tweet.Sentiment))
+		statusText := GetIntroPhrase(sentimentToMeltdown(tweet.Sentiment))
 		// TODO: Randomize this statement. Maybe use emojis and stuff.
 		statusText += " "
 		statusText += " "
@@ -235,7 +267,7 @@ func main() {
 		values.Set("in_reply_to_status_id", fmt.Sprintf("%s", tweet.Id))
 		values.Set("auto_populate_reply_metadata", "true")
 
-		if !*testing {
+		if !testing {
 			fmt.Printf("Posting tweet response to tweet ID %d\n", tweet.Id)
 			response, err := api.PostTweet(statusTextFinal, values)
 			if err != nil {
@@ -251,14 +283,14 @@ func main() {
 
 	jsonString, err := json.MarshalIndent(responseJson, "", "    ")
 
-	if !*testing {
+	if !testing {
 		ioutil.WriteFile(filename, jsonString, 0644)
 		ioutil.WriteFile("latest", jsonString, 0644)
 	} else {
 		ioutil.WriteFile("testjson", jsonString, 0644)
 	}
 
-	if numNewTweets > 0 && !*testing {
+	if numNewTweets > 0 && !testing {
 		fmt.Printf("New tweets exist. Publishing new file to bucket.\n")
 		upload := bucket.Object(filename).NewWriter(ctx)
 		upload.ContentType = "application/json"
@@ -291,7 +323,7 @@ func main() {
 
 	os.Remove(filename)
 
-	if *machineLearning {
+	if machineLearning {
 		fmt.Printf("\n===Running Machine learning logic\n===\n")
 
 		//Get all rows in the database
@@ -326,4 +358,62 @@ func calculateCapsPercentage(tweetText string) int {
 	}
 
 	return int((float32(totalCapitals) / float32(totalChars)) * 100)
+}
+
+type JsonFile struct {
+	Phrases []Phrase `json:"phrases"`
+}
+
+type Phrase struct {
+	Format string `json:"format"`
+	Type   string `json:"type"`
+	Char   string `json:"char"`
+}
+
+
+func GetIntroPhrase(meltdownPct int) string {
+	// Read the JSON file
+	jsonFile, err := os.Open("phrases.json")
+	if err != nil {
+		fmt.Errorf("%s\n", err)
+	}
+	defer jsonFile.Close()
+	JsonContents, err := ioutil.ReadAll(jsonFile)
+	if err != nil {
+		fmt.Errorf("%s\n", err)
+	}
+
+	fmt.Printf("%d\n", len(JsonContents))
+	var jsonStruct JsonFile
+
+	err = json.Unmarshal(JsonContents, &jsonStruct)
+	if err != nil {
+		fmt.Errorf("%s\n", err)
+	}
+
+	// Parse into array of phrases
+	phrases := jsonStruct.Phrases
+
+	// Randomly Choose one
+	index := rand.Int() % len(phrases)
+	phrase := phrases[index]
+
+	// Parse it with a switch statement on the type
+	switch phrase.Type {
+	case "percentage":
+		return fmt.Sprintf(phrase.Format, meltdownPct)
+	case "repeat-char-out-of-10":
+		charAmount := int(meltdownPct/10) + 1
+		charString := ""
+		for i := 0; i < charAmount; i++ {
+			charString += phrase.Char
+		}
+		return fmt.Sprintf(phrase.Format, charString)
+	case "out-of-5":
+		return fmt.Sprintf(phrase.Format, int(meltdownPct/20)+1)
+	case "out-of-10":
+		return fmt.Sprintf(phrase.Format, int(meltdownPct/10)+1)
+	default:
+		return fmt.Sprintf("This Tweet is a %d%% meltdown.", meltdownPct)
+	}
 }
