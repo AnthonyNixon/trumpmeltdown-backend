@@ -9,4 +9,10 @@ FROM alpine
 COPY --from=builder /go/src/github.com/anthonynixon/trumpmeltdown-backend/trumpmeltdown-backend-http /trumpmeltdown-backend-http
 RUN chmod +x /trumpmeltdown-backend-http
 
+RUN apk update \
+        && apk upgrade \
+        && apk add --no-cache \
+        ca-certificates \
+        && update-ca-certificates 2>/dev/null || true
+
 CMD ["/trumpmeltdown-backend-http"]
