@@ -48,8 +48,6 @@ type Tweet struct {
 	EmbedHTML string
 }
 
-var numTweets = 10
-
 func main() {
 	log.Print("Running IsTrumpMeltingDown bot.")
 	http.HandleFunc("/", handler)
@@ -82,6 +80,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
 }
 
 func isTrumpMeltingDown(testing bool, machineLearning bool) {
+	var numTweets = 10
 
 	//var testing = flag.Bool("testing", false, "enable testing mode. No actual tweeting or API calls.")
 	//var machineLearning = flag.Bool("machinelearning", false, "run machine learning logic.")
