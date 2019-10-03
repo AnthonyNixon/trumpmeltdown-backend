@@ -8,7 +8,7 @@ RUN go mod tidy
 FROM builder as binary_builder
 
 COPY . .
-RUN CGO_ENABLED=0 GOOS=linus go build -a -o /trumpmeltdown-backend-http .
+RUN CGO_ENABLED=0 GOOS=linux go build -a -o /trumpmeltdown-backend-http .
 
 FROM scratch
 
