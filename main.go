@@ -102,15 +102,10 @@ func isTrumpMeltingDown(testing bool, machineLearning bool) {
 		screenName = "realDonaldTrump"
 	}
 
-
-	fmt.Printf("CKey: %s\nCSec: %s\nATok: %s\nASec: %s\n", consumerKey, consumerSecret, accessToken, accessSecret)
-
 	DB_USER := os.Getenv("TRUMPMELTDOWN_DBUSER")
 	DB_PASS := os.Getenv("TRUMPMELTDOWN_DBPASS")
 	DB_HOST := os.Getenv("DBHOST")
 
-	//anaconda.SetConsumerKey(consumerKey)
-	//anaconda.SetConsumerSecret(consumerSecret)
 	api := anaconda.NewTwitterApiWithCredentials(accessToken, accessSecret, consumerKey, consumerSecret)
 
 	dsn := DB_USER + ":" + DB_PASS + "@tcp(" + DB_HOST + ":3306)/trumpmeltdown?parseTime=true"
@@ -251,9 +246,9 @@ func isTrumpMeltingDown(testing bool, machineLearning bool) {
 	log.Printf("Number of tweets in latest file: %d\n", len(last.Tweets))
 	log.Printf("Tweets contains %d, adding %d more...\n", len(Tweets), (numTweets - len(Tweets)))
 
-	//for i := 0; (len(Tweets) < numTweets) && (i <= last.NumTweets); i++ {
-	//	Tweets = append(Tweets, Tweet{last.Tweets[i].Text, last.Tweets[i].Sentiment, last.Tweets[i].Id, last.Tweets[i].EmbedHTML})
-	//}
+	for i := 0; (len(Tweets) < numTweets) && (i <= last.NumTweets); i++ {
+		Tweets = append(Tweets, Tweet{last.Tweets[i].Text, last.Tweets[i].Sentiment, last.Tweets[i].Id, last.Tweets[i].EmbedHTML})
+	}
 
 	for _, tweet := range Tweets {
 		totalSentiment += tweet.Sentiment
