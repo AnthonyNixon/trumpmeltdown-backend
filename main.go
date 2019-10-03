@@ -5,6 +5,7 @@ import (
 	"math/rand"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
 
 	"github.com/ChimeraCoder/anaconda"
@@ -50,7 +51,6 @@ type Tweet struct {
 }
 
 func main() {
-	log.Print("Running IsTrumpMeltingDown bot.")
 	http.HandleFunc("/", handler)
 	port := os.Getenv("PORT")
 	if port == "" {
@@ -75,11 +75,12 @@ func handler(_ http.ResponseWriter, r *http.Request) {
 		machineLearning = false
 	}
 
-	log.Printf("Calling isTrumpMeltingDown(%v, %v)", testing, machineLearning)
+	log.Printf("Calling isTrumpMeltingDown(Testing: %v, Machine Learning: %v)", testing, machineLearning)
 	isTrumpMeltingDown(testing, machineLearning)
 }
 
 func isTrumpMeltingDown(testing bool, machineLearning bool) {
+	rand.Seed(time.Now().UTC().UnixNano())
 	var numTweets = 10
 
 	//var testing = flag.Bool("testing", false, "enable testing mode. No actual tweeting or API calls.")
@@ -96,6 +97,33 @@ func isTrumpMeltingDown(testing bool, machineLearning bool) {
 	consumerSecret := os.Getenv("TRUMPMELTDOWN_CONSUMER_SECRET")
 	accessToken := os.Getenv("TRUMPMELTDOWN_ACCESS_TOKEN")
 	accessSecret := os.Getenv("TRUMPMELTDOWN_ACCESS_SECRET")
+
+	percentResponseString := os.Getenv("TRUMPMELTDOWN_RESPONSE_PERCENT")
+	if percentResponseString == "" {
+		percentResponseString = "5"
+	}
+	percentResponse, err := strconv.Atoi(percentResponseString)
+	if err != nil {
+		log.Fatalf("Parse Response Percent: %v", err)
+	}
+
+	percentResponseLinkString := os.Getenv("TRUMPMELTDOWN_RESPONSE_LINK_PERCENT")
+	if percentResponseLinkString == "" {
+		percentResponseLinkString = "25"
+	}
+	percentResponseLink, err := strconv.Atoi(percentResponseLinkString)
+	if err != nil {
+		log.Fatalf("Parse Response Link percent: %v", err)
+	}
+
+	percentSummaryString := os.Getenv("TRUMPMELTDOWN_SUMMARY_PERCENT")
+	if percentSummaryString == "" {
+		percentSummaryString = "25"
+	}
+	percentSummary, err := strconv.Atoi(percentSummaryString)
+	if err != nil {
+		log.Fatalf("Parse Summary Percent: %v", err)
+	}
 
 	screenName := os.Getenv("TRUMPMELTDOWN_SCREEN_NAME")
 	if screenName == "" {
@@ -124,7 +152,6 @@ func isTrumpMeltingDown(testing bool, machineLearning bool) {
 
 	latestContents, err := ioutil.ReadFile("latest")
 	if err != nil {
-		log.Print("latest file not found locally. Reaching out to bucket.")
 		latestReader, err := bucket.Object("latest").NewReader(ctx)
 		if err != nil {
 			log.Print(fmt.Errorf("readFile: unable to open file from bucket %q, file %q: %v", bucketName, "latest", err))
@@ -255,7 +282,10 @@ func isTrumpMeltingDown(testing bool, machineLearning bool) {
 		} else {
 			randSentiment := rand.Float32()*2 - 1
 			Tweets = append(Tweets, Tweet{tweet.FullText, randSentiment, fmt.Sprintf("%d", tweet.Id), oembed.Html})
-			tweetsToSend = append(tweetsToSend, Tweet{tweet.FullText, randSentiment, fmt.Sprintf("%d", tweet.Id), oembed.Html})
+			if rand.Intn(100) <= percentResponse {
+				log.Print("Adding response")
+				tweetsToSend = append(tweetsToSend, Tweet{tweet.FullText, randSentiment, fmt.Sprintf("%d", tweet.Id), oembed.Html})
+			}
 		}
 
 	}
@@ -292,7 +322,10 @@ func isTrumpMeltingDown(testing bool, machineLearning bool) {
 			statusText += "#TRUMP IS CURRENTLY MELTING DOWN"
 		}
 
-		statusTextFinal := fmt.Sprintf("@realDonaldTrump %s\n#TrumpMeltdown #IsTrumpMeltingDown\nCheck it out here: https://isTrumpMeltingDown.com?id=%s", statusText, tweet.Id)
+		statusTextFinal := fmt.Sprintf("@realDonaldTrump %s\n#TrumpMeltdown #IsTrumpMeltingDown", statusText)
+		if rand.Intn(100) <= percentResponseLink {
+			statusTextFinal = fmt.Sprintf("%s\nCheck it out here: https://isTrumpMeltingDown.com?id=%s", statusTextFinal, tweet.Id)
+		}
 
 		values := url.Values{}
 		values.Set("in_reply_to_status_id", fmt.Sprintf("%s", tweet.Id))
@@ -360,6 +393,36 @@ func isTrumpMeltingDown(testing bool, machineLearning bool) {
 			log.Fatal(err)
 		}
 
+		if rand.Intn(100) <= percentSummary {
+			summaryString := "#IsTrumpMeltingDown Summary of #Trump's last 10 Tweets:\n\n"
+			for i, tweet := range Tweets {
+				emoji := "🔥"
+				if tweet.Sentiment >= .3 && tweet.Sentiment < .5 {
+					emoji = "😠"
+				} else if tweet.Sentiment >= .5 && tweet.Sentiment < .85 {
+					emoji = "😐"
+				} else {
+					emoji = "🙂"
+				}
+
+				summaryString += fmt.Sprintf("%d: %s\n", i, emoji)
+
+			}
+
+			summaryString += "#TrumpMeltdown "
+			if rand.Intn(100) <= percentResponseLink {
+				summaryString += "\nCheck it out: https://istrumpmeltingdown.com"
+			}
+
+			log.Printf("Posting Summary Tweet")
+
+			values := url.Values{}
+			_, err := api.PostTweet(summaryString, values)
+			if err != nil {
+				log.Println(err)
+			}
+		}
+
 	}
 
 	err = os.Remove(filename)
@@ -382,6 +445,7 @@ func isTrumpMeltingDown(testing bool, machineLearning bool) {
 			panic(err)
 		}
 	}
+
 }
 
 func sentimentToMeltdown(sentiment float32) int {
