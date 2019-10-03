@@ -1,5 +1,6 @@
 FROM golang:1.13.1-alpine as builder
 
+RUN apk add bash ca-certificates git gcc g++ libc-dev
 WORKDIR /go/src/github.com/anthonynixon/trumpmeltdown-backend
 COPY go.mod .
 RUN go mod tidy
