@@ -164,6 +164,7 @@ func isTrumpMeltingDown(testing bool, machineLearning bool) {
 
 	values := url.Values{}
 	values.Set("screen_name", screenName)
+	values.Set("count", fmt.Sprintf("%d", numTweets))
 	if latestTweet.Id != "" {
 		values.Set("since_id", fmt.Sprintf("%s", latestTweet.Id))
 	}
