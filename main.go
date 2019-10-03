@@ -109,9 +109,9 @@ func isTrumpMeltingDown(testing bool, machineLearning bool) {
 	DB_PASS := os.Getenv("TRUMPMELTDOWN_DBPASS")
 	DB_HOST := os.Getenv("DBHOST")
 
-	anaconda.SetConsumerKey(consumerKey)
-	anaconda.SetConsumerSecret(consumerSecret)
-	api := anaconda.NewTwitterApi(accessToken, accessSecret)
+	//anaconda.SetConsumerKey(consumerKey)
+	//anaconda.SetConsumerSecret(consumerSecret)
+	api := anaconda.NewTwitterApiWithCredentials(accessToken, accessSecret, consumerKey, consumerSecret)
 
 	dsn := DB_USER + ":" + DB_PASS + "@tcp(" + DB_HOST + ":3306)/trumpmeltdown?parseTime=true"
 
