@@ -289,7 +289,7 @@ func isTrumpMeltingDown(testing bool, machineLearning bool) {
 			if err != nil {
 				fmt.Println(err)
 			}
-			responseJson.LastSentTweet = fmt.Sprintf("%s", response.Id)
+			responseJson.LastSentTweet = fmt.Sprintf("%d", response.Id)
 			log.Printf("Sent Tweet ID: %d\n", responseJson.LastSentTweet)
 		} else {
 			log.Printf("Tweet: %s\n\n", statusTextFinal)
