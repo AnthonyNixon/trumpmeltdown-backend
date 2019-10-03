@@ -255,12 +255,10 @@ func isTrumpMeltingDown(testing bool, machineLearning bool) {
 
 	}
 
-	defer func() {
-		err := stmt.Close()
-		if err != nil {
-			log.Fatalf("Statement Close: %v", err)
-		}
-	}()
+	err = stmt.Close()
+	if err != nil {
+		log.Fatalf("Statement Close: %v", err)
+	}
 
 	log.Printf("Number of tweets in latest file: %d\n", len(last.Tweets))
 	log.Printf("Tweets contains %d, adding %d more...\n", len(Tweets), numTweets-len(Tweets))
