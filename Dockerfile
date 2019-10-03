@@ -11,6 +11,7 @@ COPY . .
 RUN CGO_ENABLED=0 GOOS=linux go build -a -o /trumpmeltdown-backend-http .
 
 FROM scratch
+ADD ca-certificates.crt /etc/ssl/certs/
 
 COPY --from=binary_builder /trumpmeltdown-backend-http /trumpmeltdown-backend-http
 CMD ["./trumpmeltdown-backend-http"]
