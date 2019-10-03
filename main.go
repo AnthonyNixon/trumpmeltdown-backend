@@ -17,6 +17,7 @@ import (
 	"cloud.google.com/go/language/apiv1"
 	"golang.org/x/net/context"
 	languagepb "google.golang.org/genproto/googleapis/cloud/language/v1"
+
 	// Imports the Google Cloud Storage client package.
 	"os"
 
@@ -59,8 +60,7 @@ func main() {
 	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%s", port), nil))
 }
 
-func handler(w http.ResponseWriter, r *http.Request) {
-	log.Print("Request Receieved.")
+func handler(_ http.ResponseWriter, r *http.Request) {
 	testing := true
 	machineLearning := true
 
@@ -102,13 +102,13 @@ func isTrumpMeltingDown(testing bool, machineLearning bool) {
 		screenName = "realDonaldTrump"
 	}
 
-	DB_USER := os.Getenv("TRUMPMELTDOWN_DBUSER")
-	DB_PASS := os.Getenv("TRUMPMELTDOWN_DBPASS")
-	DB_HOST := os.Getenv("DBHOST")
+	DatabaseUser := os.Getenv("TRUMPMELTDOWN_DBUSER")
+	DatabasePass := os.Getenv("TRUMPMELTDOWN_DBPASS")
+	DatabaseHost := os.Getenv("DBHOST")
 
 	api := anaconda.NewTwitterApiWithCredentials(accessToken, accessSecret, consumerKey, consumerSecret)
 
-	dsn := DB_USER + ":" + DB_PASS + "@tcp(" + DB_HOST + ":3306)/trumpmeltdown?parseTime=true"
+	dsn := DatabaseUser + ":" + DatabasePass + "@tcp(" + DatabaseHost + ":3306)/trumpmeltdown?parseTime=true"
 
 	ctx := context.Background()
 	client, err := language.NewClient(ctx)
@@ -130,7 +130,13 @@ func isTrumpMeltingDown(testing bool, machineLearning bool) {
 			log.Print(fmt.Errorf("readFile: unable to open file from bucket %q, file %q: %v", bucketName, "latest", err))
 			return
 		}
-		defer latestReader.Close()
+		defer func() {
+			err := latestReader.Close()
+			if err != nil {
+				log.Fatalf("Bucket Object Close: %v", err)
+			}
+		}()
+
 		latestContents, err = ioutil.ReadAll(latestReader)
 		if err != nil {
 			log.Print(fmt.Errorf("readFile: unable to read data from bucket %q, file %q: %v", bucketName, "latest", err))
@@ -139,7 +145,10 @@ func isTrumpMeltingDown(testing bool, machineLearning bool) {
 	}
 
 	var last TweetSentiment
-	json.Unmarshal(latestContents, &last)
+	err = json.Unmarshal(latestContents, &last)
+	if err != nil {
+		log.Fatalf("Json Unmarshal: %v", err)
+	}
 
 	latestTweet := Tweet{
 		Text:      "",
@@ -154,8 +163,6 @@ func isTrumpMeltingDown(testing bool, machineLearning bool) {
 			latestTweet = last.Tweets[len(last.Tweets)-1]
 		}
 	}
-
-
 
 	values := url.Values{}
 	values.Set("screen_name", screenName)
@@ -181,7 +188,14 @@ func isTrumpMeltingDown(testing bool, machineLearning bool) {
 	if err != nil {
 		log.Print(err.Error())
 	}
-	defer db.Close()
+
+	defer func() {
+		err := db.Close()
+		if err != nil {
+			log.Fatalf("Database Close: %v", err)
+		}
+	}()
+
 	// make sure our connection is available
 	err = db.Ping()
 	if err != nil {
@@ -226,25 +240,30 @@ func isTrumpMeltingDown(testing bool, machineLearning bool) {
 			tweetsToSend = append(tweetsToSend, Tweet{tweet.FullText, sentiment.DocumentSentiment.Score, fmt.Sprintf("%d", tweet.Id), oembed.Html})
 			stmt, err = db.Prepare("insert into tweets (sentiment, time_of_day, time_since_last_tweet, caps_percentage, length, grammar_mistake_count, isRetweet, tweet_id, tweet_text, html) values(?,?,?,?,?,?,?,?,?,?);")
 			if err != nil {
-				log.Print(err.Error())
+				log.Fatalf("Database Prepare: %v", err)
 			}
 			_, err = stmt.Exec(sentimentToMeltdown(sentiment.DocumentSentiment.Score), nil, nil, calculateCapsPercentage(tweet.FullText), len(tweet.FullText), 0, 0, tweet.Id, tweet.FullText, oembed.Html)
 
 			if err != nil {
 				log.Print(err.Error())
 			}
-
-			defer stmt.Close()
 		} else {
-			randSentiment := ((rand.Float32() * 2) - 1)
+			randSentiment := rand.Float32()*2 - 1
 			Tweets = append(Tweets, Tweet{tweet.FullText, randSentiment, fmt.Sprintf("%d", tweet.Id), oembed.Html})
 			tweetsToSend = append(tweetsToSend, Tweet{tweet.FullText, randSentiment, fmt.Sprintf("%d", tweet.Id), oembed.Html})
 		}
 
 	}
 
+	defer func() {
+		err := stmt.Close()
+		if err != nil {
+			log.Fatalf("Statement Close: %v", err)
+		}
+	}()
+
 	log.Printf("Number of tweets in latest file: %d\n", len(last.Tweets))
-	log.Printf("Tweets contains %d, adding %d more...\n", len(Tweets), (numTweets - len(Tweets)))
+	log.Printf("Tweets contains %d, adding %d more...\n", len(Tweets), numTweets-len(Tweets))
 
 	for i := 0; (len(Tweets) < numTweets) && (i <= last.NumTweets); i++ {
 		Tweets = append(Tweets, Tweet{last.Tweets[i].Text, last.Tweets[i].Sentiment, last.Tweets[i].Id, last.Tweets[i].EmbedHTML})
@@ -262,14 +281,12 @@ func isTrumpMeltingDown(testing bool, machineLearning bool) {
 	trendingTowardMeltdown := last.Average > average
 	for _, tweet := range tweetsToSend {
 		statusText := GetIntroPhrase(sentimentToMeltdown(tweet.Sentiment))
-		// TODO: Randomize this statement. Maybe use emojis and stuff.
 		statusText += " "
 		statusText += " "
 
 		if average >= 0 {
 			// Trump Average is not melting down
 			statusText += "#Trump is not currently melting down "
-			//Todo: insert random adjectives between is and trending
 			if trendingTowardMeltdown {
 				statusText += "but is trending toward a meltdown!"
 			}
@@ -277,20 +294,20 @@ func isTrumpMeltingDown(testing bool, machineLearning bool) {
 			statusText += "#TRUMP IS CURRENTLY MELTING DOWN"
 		}
 
-		statusTextFinal := fmt.Sprintf("@realDonaldTrump %s\nCheck it out here: https://isTrumpMeltingDown.com?id=%s", statusText, tweet.Id)
+		statusTextFinal := fmt.Sprintf("@realDonaldTrump %s\n#TrumpMeltdown #IsTrumpMeltingDown\nCheck it out here: https://isTrumpMeltingDown.com?id=%s", statusText, tweet.Id)
 
 		values := url.Values{}
 		values.Set("in_reply_to_status_id", fmt.Sprintf("%s", tweet.Id))
 		values.Set("auto_populate_reply_metadata", "true")
 
 		if !testing {
-			log.Printf("Posting tweet response to tweet ID %d\n", tweet.Id)
+			log.Printf("Posting tweet response to tweet ID %s\n", tweet.Id)
 			response, err := api.PostTweet(statusTextFinal, values)
 			if err != nil {
 				fmt.Println(err)
 			}
 			responseJson.LastSentTweet = fmt.Sprintf("%d", response.Id)
-			log.Printf("Sent Tweet ID: %d\n", responseJson.LastSentTweet)
+			log.Printf("Sent Tweet ID: %s\n", responseJson.LastSentTweet)
 		} else {
 			log.Printf("Tweet: %s\n\n", statusTextFinal)
 		}
@@ -300,10 +317,20 @@ func isTrumpMeltingDown(testing bool, machineLearning bool) {
 	jsonString, err := json.MarshalIndent(responseJson, "", "    ")
 
 	if !testing {
-		ioutil.WriteFile(filename, jsonString, 0644)
-		ioutil.WriteFile("latest", jsonString, 0644)
+		err := ioutil.WriteFile(filename, jsonString, 0644)
+		if err != nil {
+			log.Fatalf("Write Test File: %v", err)
+		}
+
+		err = ioutil.WriteFile("latest", jsonString, 0644)
+		if err != nil {
+			log.Fatalf("Write Latest File: %v", err)
+		}
 	} else {
-		ioutil.WriteFile("testjson", jsonString, 0644)
+		err := ioutil.WriteFile("testjson", jsonString, 0644)
+		if err != nil {
+			log.Fatalf("Write Latest File: %v", err)
+		}
 	}
 
 	if numNewTweets > 0 && !testing {
@@ -337,7 +364,10 @@ func isTrumpMeltingDown(testing bool, machineLearning bool) {
 
 	}
 
-	os.Remove(filename)
+	err = os.Remove(filename)
+	if err != nil {
+		log.Fatalf("Removing File %s: %v", filename, err)
+	}
 
 	if machineLearning {
 		log.Printf("\n===Running Machine learning logic\n===\n")
@@ -386,25 +416,28 @@ type Phrase struct {
 	Char   string `json:"char"`
 }
 
-
 func GetIntroPhrase(meltdownPct int) string {
 	// Read the JSON file
 	jsonFile, err := os.Open("phrases.json")
 	if err != nil {
-		fmt.Errorf("%s\n", err)
+		log.Fatalf("Open Phrases File: %v", err)
 	}
-	defer jsonFile.Close()
+	defer func() {
+		err := jsonFile.Close()
+		if err != nil {
+			log.Fatalf("Close Phrases File: %v", err)
+		}
+	}()
+
 	JsonContents, err := ioutil.ReadAll(jsonFile)
 	if err != nil {
-		fmt.Errorf("%s\n", err)
+		log.Fatalf("Read Phrases File: %v", err)
 	}
 
-	log.Printf("%d\n", len(JsonContents))
 	var jsonStruct JsonFile
-
 	err = json.Unmarshal(JsonContents, &jsonStruct)
 	if err != nil {
-		fmt.Errorf("%s\n", err)
+		log.Fatalf("Unmarshal Phrases File: %v", err)
 	}
 
 	// Parse into array of phrases
@@ -419,16 +452,16 @@ func GetIntroPhrase(meltdownPct int) string {
 	case "percentage":
 		return fmt.Sprintf(phrase.Format, meltdownPct)
 	case "repeat-char-out-of-10":
-		charAmount := int(meltdownPct/10) + 1
+		charAmount := meltdownPct/10 + 1
 		charString := ""
 		for i := 0; i < charAmount; i++ {
 			charString += phrase.Char
 		}
 		return fmt.Sprintf(phrase.Format, charString)
 	case "out-of-5":
-		return fmt.Sprintf(phrase.Format, int(meltdownPct/20)+1)
+		return fmt.Sprintf(phrase.Format, meltdownPct/20+1)
 	case "out-of-10":
-		return fmt.Sprintf(phrase.Format, int(meltdownPct/10)+1)
+		return fmt.Sprintf(phrase.Format, meltdownPct/10+1)
 	default:
 		return fmt.Sprintf("This Tweet is a %d%% meltdown.", meltdownPct)
 	}
