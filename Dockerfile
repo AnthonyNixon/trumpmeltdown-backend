@@ -14,4 +14,5 @@ FROM scratch
 COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
 
 COPY --from=binary_builder /trumpmeltdown-backend-http /trumpmeltdown-backend-http
+COPY phrases.json /phrases.json
 CMD ["./trumpmeltdown-backend-http"]
