@@ -138,6 +138,7 @@ func isTrumpMeltingDown(testing bool, machineLearning bool) {
 
 	var last TweetSentiment
 	json.Unmarshal(latestContents, &last)
+
 	latestTweet := Tweet{
 		Text:      "",
 		Sentiment: 0,
@@ -243,9 +244,9 @@ func isTrumpMeltingDown(testing bool, machineLearning bool) {
 	log.Printf("Number of tweets in latest file: %d\n", len(last.Tweets))
 	log.Printf("Tweets contains %d, adding %d more...\n", len(Tweets), (numTweets - len(Tweets)))
 
-	for i := 0; (len(Tweets) < numTweets) && (i <= last.NumTweets); i++ {
-		Tweets = append(Tweets, Tweet{last.Tweets[i].Text, last.Tweets[i].Sentiment, last.Tweets[i].Id, last.Tweets[i].EmbedHTML})
-	}
+	//for i := 0; (len(Tweets) < numTweets) && (i <= last.NumTweets); i++ {
+	//	Tweets = append(Tweets, Tweet{last.Tweets[i].Text, last.Tweets[i].Sentiment, last.Tweets[i].Id, last.Tweets[i].EmbedHTML})
+	//}
 
 	for _, tweet := range Tweets {
 		totalSentiment += tweet.Sentiment
