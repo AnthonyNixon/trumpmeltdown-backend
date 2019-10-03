@@ -166,7 +166,7 @@ func isTrumpMeltingDown(testing bool, machineLearning bool) {
 
 	tweetsResponse, err := api.GetUserTimeline(values)
 	if err != nil {
-		fmt.Println(err)
+		log.Fatalf("Get Tweets: %v", err)
 	}
 
 	var Tweets []Tweet
