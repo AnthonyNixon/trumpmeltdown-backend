@@ -97,6 +97,12 @@ func isTrumpMeltingDown(testing bool, machineLearning bool) {
 	accessToken := os.Getenv("TRUMPMELTDOWN_ACCESS_TOKEN")
 	accessSecret := os.Getenv("TRUMPMELTDOWN_ACCESS_SECRET")
 
+	screenName := os.Getenv("TRUMPMELTDOWN_SCREEN_NAME")
+	if screenName == "" {
+		screenName = "realDonaldTrump"
+	}
+
+
 	fmt.Printf("CKey: %s\nCSec: %s\nATok: %s\nASec: %s\n", consumerKey, consumerSecret, accessToken, accessSecret)
 
 	DB_USER := os.Getenv("TRUMPMELTDOWN_DBUSER")
@@ -157,7 +163,7 @@ func isTrumpMeltingDown(testing bool, machineLearning bool) {
 
 
 	values := url.Values{}
-	values.Set("screen_name", "anthonynixon")
+	values.Set("screen_name", screenName)
 	if latestTweet.Id != "" {
 		values.Set("since_id", fmt.Sprintf("%s", latestTweet.Id))
 	}
