@@ -247,17 +247,17 @@ func isTrumpMeltingDown(testing bool, machineLearning bool) {
 			if err != nil {
 				log.Print(err.Error())
 			}
+
+			err = stmt.Close()
+			if err != nil {
+				log.Fatalf("Statement Close: %v", err)
+			}
 		} else {
 			randSentiment := rand.Float32()*2 - 1
 			Tweets = append(Tweets, Tweet{tweet.FullText, randSentiment, fmt.Sprintf("%d", tweet.Id), oembed.Html})
 			tweetsToSend = append(tweetsToSend, Tweet{tweet.FullText, randSentiment, fmt.Sprintf("%d", tweet.Id), oembed.Html})
 		}
 
-	}
-
-	err = stmt.Close()
-	if err != nil {
-		log.Fatalf("Statement Close: %v", err)
 	}
 
 	log.Printf("Number of tweets in latest file: %d\n", len(last.Tweets))
