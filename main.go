@@ -138,11 +138,21 @@ func isTrumpMeltingDown(testing bool, machineLearning bool) {
 
 	var last TweetSentiment
 	json.Unmarshal(latestContents, &last)
-	latestTweet := last.Tweets[0]
-
-	if testing {
-		latestTweet = last.Tweets[len(last.Tweets)-1]
+	latestTweet := Tweet{
+		Text:      "",
+		Sentiment: 0,
+		Id:        "",
+		EmbedHTML: "",
 	}
+	if len(last.Tweets) > 0 {
+		latestTweet = last.Tweets[0]
+
+		if testing {
+			latestTweet = last.Tweets[len(last.Tweets)-1]
+		}
+	}
+
+
 
 	values := url.Values{}
 	values.Set("screen_name", "realdonaldtrump")
