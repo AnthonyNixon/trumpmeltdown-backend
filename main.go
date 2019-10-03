@@ -97,6 +97,8 @@ func isTrumpMeltingDown(testing bool, machineLearning bool) {
 	accessToken := os.Getenv("TRUMPMELTDOWN_ACCESS_TOKEN")
 	accessSecret := os.Getenv("TRUMPMELTDOWN_ACCESS_SECRET")
 
+	fmt.Printf("CKey: %s\nCSec: %s\nATok: %s\nASec: %s\n", consumerKey, consumerSecret, accessToken, accessSecret)
+
 	DB_USER := os.Getenv("TRUMPMELTDOWN_DBUSER")
 	DB_PASS := os.Getenv("TRUMPMELTDOWN_DBPASS")
 	DB_HOST := os.Getenv("DBHOST")
