@@ -408,7 +408,7 @@ func isTrumpMeltingDown(testing bool, machineLearning bool) {
 					emoji = "🙂"
 				}
 
-				summaryString += fmt.Sprintf("%d: %s\n", i, emoji)
+				summaryString += fmt.Sprintf("%d: %s\n", i+1, emoji)
 
 			}
 
