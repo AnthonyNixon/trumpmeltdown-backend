@@ -194,6 +194,7 @@ func isTrumpMeltingDown(testing bool, machineLearning bool) {
 	values := url.Values{}
 	values.Set("screen_name", screenName)
 	values.Set("count", fmt.Sprintf("%d", numTweets))
+	values.Set("include_rts", "false")
 	if latestTweet.Id != "" {
 		values.Set("since_id", fmt.Sprintf("%s", latestTweet.Id))
 	}
@@ -232,6 +233,9 @@ func isTrumpMeltingDown(testing bool, machineLearning bool) {
 	var stmt *sql.Stmt
 
 	for i, tweet := range tweetsResponse {
+		//if strings.ToLower(tweet.User.ScreenName) != "realdonaldtrump"  {
+		//	continue
+		//}
 		// Get Embed HTML for Tweet
 		values := url.Values{}
 		values.Set("omit_script", "true")
