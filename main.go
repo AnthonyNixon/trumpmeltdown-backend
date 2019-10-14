@@ -404,9 +404,7 @@ func isTrumpMeltingDown(testing bool, machineLearning bool) {
 			summaryString := "#IsTrumpMeltingDown Summary of #Trump's last 10 Tweets:\n\n"
 			for i, tweet := range Tweets {
 				emoji := "🔥"
-				if tweet.Sentiment >= .3 && tweet.Sentiment < .5 {
-					emoji = "😠"
-				} else if tweet.Sentiment >= .5 && tweet.Sentiment < .85 {
+				if tweet.Sentiment >= .5 && tweet.Sentiment < .85 {
 					emoji = "😐"
 				} else {
 					emoji = "🙂"
